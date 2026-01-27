@@ -4,15 +4,6 @@ import { Language, t } from "./translations";
 import * as Types from "./types";
 import * as Utils from "./utils";
 
-function hasAnyUndefined(obj: any): boolean {
-  if (obj === undefined) return true;
-  if (typeof obj !== "object" || obj === null) return false;
-  for (const key in obj) {
-    if (hasAnyUndefined(obj[key])) return true;
-  }
-  return false;
-}
-
 function dispatchPostFetchCallback(callback?: Types.PostfetchCallback, args?: any): void {
   if (callback) {
     Promise.resolve()
@@ -21,7 +12,7 @@ function dispatchPostFetchCallback(callback?: Types.PostfetchCallback, args?: an
   }
 }
 
-export function create<TConfig extends Types.RequestConfig<any, any, any, any, any, any, any, any, any>, TError = string>(
+export function create<TConfig extends Types.RequestConfig<any, any, any, any, any, any, any>, TError = string>(
   host: string,
   config: TConfig,
   prefetchCallback: Types.PrefetchCallback | undefined,
@@ -35,14 +26,6 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
   const requester = async function (params: Types.CallSignature<TConfig>) {
     const promise = async (): Promise<Types.ApiResponse<ResponseSchema.InferResult<TConfig["response"]>, TError>> => {
       try {
-        // Check for undefined parameters if requested
-        if (params.preventFetchingWithUndefinedParams && hasAnyUndefined(params)) {
-          const undefinedError = Errors.createUndefinedParamError(translations.errors.undefinedParams, 400);
-          const nError = { ...undefinedError, endpoint: config.endpoint, method: config.method };
-          dispatchPostFetchCallback(postfetchCallback, nError);
-          return nError;
-        }
-
         const url = Utils.buildUrl(host, config, params);
 
         // Prepare request details for prefetchCallback
@@ -93,20 +76,7 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
         // Parse response data (no validation, trust the types)
         const data = await response.json();
 
-        // Apply mapper if present and not skipped
-        let resultData = data;
-        if (!params.skipMapper && config.response.mapper) {
-          try {
-            resultData = config.response.mapper(data)(params.map);
-          } catch (error) {
-            const mapperError = Errors.createMapperError(translations.errors.mapperError, error instanceof Error ? error : new Error(String(error)));
-            const nError = { ...mapperError, endpoint: config.endpoint, method: config.method };
-            dispatchPostFetchCallback(postfetchCallback, nError);
-            return nError;
-          }
-        }
-
-        const successResult = Errors.createSuccess(resultData);
+        const successResult = Errors.createSuccess(data);
         const nResult = { ...successResult, endpoint: config.endpoint, method: config.method };
         dispatchPostFetchCallback(postfetchCallback, nResult);
         return nResult;
@@ -121,6 +91,5 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
     return await promise();
   };
 
-  requester.mapper = config.response.mapper;
   return requester as Types.RequesterFunction<TConfig, TError>;
 }

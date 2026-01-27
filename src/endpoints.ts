@@ -1,12 +1,10 @@
 import type { HttpMethod, RequestConfig } from "./types";
-import type { ResponseConfig } from "./response";
 
 /**
  * Configuration object for endpoint factories
  */
-type EndpointOptions<TResponse, TMapped, TMapArg> = {
+type EndpointOptions = {
   endpoint: string;
-  response: ResponseConfig<TResponse, TMapped, TMapArg>;
 };
 
 /**
@@ -18,9 +16,7 @@ type EndpointTypes<
   TFormData = undefined,
   TQuery = undefined,
   THeaders = undefined,
-  TResponse = unknown,
-  TMapped = TResponse,
-  TMapArg = undefined
+  TResponse = unknown
 > = {
   path?: TPath;
   body?: TBody;
@@ -28,8 +24,6 @@ type EndpointTypes<
   query?: TQuery;
   headers?: THeaders;
   response?: TResponse;
-  mapped?: TMapped;
-  mapArg?: TMapArg;
 };
 
 /**
@@ -41,35 +35,27 @@ type ExtractFormData<T> = T extends { formData: infer F } ? F : undefined;
 type ExtractQuery<T> = T extends { query: infer Q } ? Q : undefined;
 type ExtractHeaders<T> = T extends { headers: infer H } ? H : undefined;
 type ExtractResponse<T> = T extends { response: infer R } ? R : unknown;
-type ExtractMapped<T> = T extends { mapped: infer M } ? M : ExtractResponse<T>;
-type ExtractMapArg<T> = T extends { mapArg: infer A } ? A : undefined;
 
 /**
  * Curried endpoint factory using object-based type parameters
  *
  * Usage:
  *   // Simple - just response type
- *   Tapi.get<{ response: User[] }>()({ endpoint: "/users", response: Tapi.response<User[]>() })
+ *   Tapi.get<{ response: User[] }>()({ endpoint: "/users" })
  *
  *   // With path params
- *   Tapi.get<{ path: { id: string }, response: User }>()({ endpoint: "/users/:id", response: Tapi.response<User>() })
+ *   Tapi.get<{ path: { id: string }, response: User }>()({ endpoint: "/users/:id" })
  *
  *   // With query params
- *   Tapi.get<{ query: { limit?: number }, response: Post[] }>()({ endpoint: "/posts", response: Tapi.response<Post[]>() })
+ *   Tapi.get<{ query: { limit?: number }, response: Post[] }>()({ endpoint: "/posts" })
  *
  *   // With body (for POST/PUT)
- *   Tapi.post<{ body: CreateUser, response: User }>()({ endpoint: "/users", response: Tapi.response<User>() })
- *
- *   // With mapper
- *   Tapi.get<{ path: { id: string }, response: User, mapped: UserDTO }>()({
- *     endpoint: "/users/:id",
- *     response: Tapi.response<User, UserDTO>((u) => () => ({ ...u, fullName: u.name }))
- *   })
+ *   Tapi.post<{ body: CreateUser, response: User }>()({ endpoint: "/users" })
  */
 function createEndpointFactory<TMethod extends HttpMethod>(method: TMethod) {
-  return <T extends EndpointTypes<any, any, any, any, any, any, any, any> = {}>() =>
+  return <T extends EndpointTypes<any, any, any, any, any, any> = {}>() =>
     (
-      config: EndpointOptions<ExtractResponse<T>, ExtractMapped<T>, ExtractMapArg<T>>
+      config: EndpointOptions
     ): RequestConfig<
       TMethod,
       ExtractPath<T>,
@@ -77,13 +63,11 @@ function createEndpointFactory<TMethod extends HttpMethod>(method: TMethod) {
       ExtractFormData<T>,
       ExtractQuery<T>,
       ExtractHeaders<T>,
-      ExtractResponse<T>,
-      ExtractMapped<T>,
-      ExtractMapArg<T>
+      ExtractResponse<T>
     > => ({
       method,
       endpoint: config.endpoint,
-      response: config.response
+      response: {} // Phantom type marker - no runtime value needed
     });
 }
 

@@ -22,20 +22,6 @@ export function createCustomError<T = string>(message: string, data: T, code: nu
 }
 
 /**
- * Creates a mapper error response
- */
-export function createMapperError(message: string, error: Error, code: number = 500): Types.MapperError {
-  return { ok: false, code, status: "mapper_error", message, error };
-}
-
-/**
- * Creates an undefined parameter error response
- */
-export function createUndefinedParamError(message: string, code: number = 400): Types.UndefinedParamError {
-  return { ok: false, code, status: "undefined_param", message };
-}
-
-/**
  * Type guard to check if response is successful
  */
 export function isSuccess<T>(response: Types.ApiResponse<T, any>): response is Types.Success<T> & { endpoint: string; method: Types.HttpMethod } {

@@ -3,9 +3,7 @@ export type Language = "en" | "br";
 export interface Translations {
   errors: {
     requestFailed: string;
-    mapperError: string;
     invalidErrorFormat: string;
-    undefinedParams: string;
   };
   builder: {
     hostRequired: string;
@@ -18,9 +16,7 @@ const translations: Record<Language, Translations> = {
   en: {
     errors: {
       requestFailed: "Unable to complete the request",
-      mapperError: "Error applying mapper to response",
-      invalidErrorFormat: "Invalid error message format",
-      undefinedParams: "Undefined parameters present"
+      invalidErrorFormat: "Invalid error message format"
     },
     builder: {
       hostRequired: "Host is required - use .withHost() first",
@@ -31,9 +27,7 @@ const translations: Record<Language, Translations> = {
   br: {
     errors: {
       requestFailed: "Não foi possível completar a requisição",
-      mapperError: "Erro ao aplicar o mapper na resposta",
-      invalidErrorFormat: "Formato de mensagem de erro inválido",
-      undefinedParams: "Parâmetros 'undefined' presentes"
+      invalidErrorFormat: "Formato de mensagem de erro inválido"
     },
     builder: {
       hostRequired: "Host é obrigatório - use .withHost() primeiro",

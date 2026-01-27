@@ -2,7 +2,7 @@ import * as Errors from "./errors";
 import { Language, t } from "./translations";
 import * as Types from "./types";
 
-export function buildUrl<T extends Types.RequestConfig<any, any, any, any, any, any, any, any, any>>(host: string, config: T, params: Types.RequesterParams<T>): string {
+export function buildUrl<T extends Types.RequestConfig<any, any, any, any, any, any, any>>(host: string, config: T, params: Types.RequesterParams<T>): string {
   let url = config.endpoint;
 
   // Replace path parameters
@@ -18,7 +18,7 @@ export function buildUrl<T extends Types.RequestConfig<any, any, any, any, any, 
   return `${host}${url}${queryString}`;
 }
 
-export async function executeRequest<T extends Types.RequestConfig<any, any, any, any, any, any, any, any, any>>(
+export async function executeRequest<T extends Types.RequestConfig<any, any, any, any, any, any, any>>(
   url: string,
   config: T,
   params: Types.RequesterParams<T>,

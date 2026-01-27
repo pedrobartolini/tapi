@@ -3,12 +3,12 @@ import * as RequestCreator from "./request";
 import { Language } from "./translations";
 import * as Types from "./types";
 
-type RouteFunction<T extends Types.RequestConfig<any, any, any, any, any, any, any, any, any>, TError = string> = Types.RequesterFunction<T, TError> & {
-  useHook: (params: Types.CallSignature<T>) => Hook.HookResponse<T, TError>;
+type RouteFunction<T extends Types.RequestConfig<any, any, any, any, any, any, any>, TError = string> = Types.RequesterFunction<T, TError> & {
+  useHook: (params: (Types.CallSignature<T> & { lazy?: boolean }) | null) => Hook.HookResponse<T, TError>;
 };
 
 export type GenerateApiMethods<T extends Types.RouteDefinitions, TError = string> = {
-  [K in keyof T]: T[K] extends Types.RequestConfig<any, any, any, any, any, any, any, any, any>
+  [K in keyof T]: T[K] extends Types.RequestConfig<any, any, any, any, any, any, any>
     ? RouteFunction<T[K], TError>
     : T[K] extends Types.RouteDefinitions
       ? GenerateApiMethods<T[K], TError>
@@ -23,7 +23,7 @@ export type GenerateApiMethods<T extends Types.RouteDefinitions, TError = string
 /**
  * Check if a value is a RequestConfig by duck-typing
  */
-function isRequestConfig(value: unknown): value is Types.RequestConfig<any, any, any, any, any, any, any, any, any> {
+function isRequestConfig(value: unknown): value is Types.RequestConfig<any, any, any, any, any, any, any> {
   if (typeof value !== "object" || value === null) return false;
   const v = value as any;
   return typeof v.method === "string" && typeof v.endpoint === "string" && typeof v.response === "object" && v.response !== null;

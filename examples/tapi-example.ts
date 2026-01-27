@@ -92,53 +92,34 @@ const api = Tapi.builder()
     users: {
       // GET /users - list all users (no params needed)
       getAll: Tapi.get<{ response: User[] }>()({
-        endpoint: "/users",
-        response: Tapi.response<User[]>()
+        endpoint: "/users"
       }),
 
       // GET /users/:id - get user by id
       getById: Tapi.get<{ path: { id: number }; response: User }>()({
-        endpoint: "/users/:id",
-        response: Tapi.response()
-      }),
-
-      // GET /users/:id with mapper - transform the response
-      getByIdWithDisplayName: Tapi.get<{
-        path: { id: number };
-        response: User;
-        mapped: User & { displayName: string };
-      }>()({
-        endpoint: "/users/:id",
-        response: Tapi.response<User, User & { displayName: string }>((user) => () => ({
-          ...user,
-          displayName: `${user.name} (@${user.username})`
-        }))
+        endpoint: "/users/:id"
       })
     },
 
     posts: {
       // GET /posts - list all posts with optional query filter
       getAll: Tapi.get<{ query: { userId?: number }; response: Post[] }>()({
-        endpoint: "/posts",
-        response: Tapi.response<Post[]>()
+        endpoint: "/posts"
       }),
 
       // GET /posts/:id - get post by id
       getById: Tapi.get<{ path: { id: number }; response: Post }>()({
-        endpoint: "/posts/:id",
-        response: Tapi.response<Post>()
+        endpoint: "/posts/:id"
       }),
 
       // POST /posts - create a new post
       create: Tapi.post<{ body: CreatePostInput; response: Post }>()({
-        endpoint: "/posts",
-        response: Tapi.response<Post>()
+        endpoint: "/posts"
       }),
 
       // GET /posts/:postId/comments - get comments for a post
       comments: Tapi.get<{ path: { postId: number }; response: Comment[] }>()({
-        endpoint: "/posts/:postId/comments",
-        response: Tapi.response<Comment[]>()
+        endpoint: "/posts/:postId/comments"
       })
     }
   })
@@ -164,17 +145,6 @@ async function main() {
   if (userResult.ok) {
     console.log("User:", userResult.data.name);
     console.log("Email:", userResult.data.email);
-  }
-
-  console.log("\n---\n");
-
-  // Get user with mapper (transforms the response)
-  console.log("Fetching user #2 with display name...");
-  const userWithDisplayResult = await api.users.getByIdWithDisplayName({ path: { id: 2 } });
-  if (userWithDisplayResult.ok) {
-    // The mapper adds displayName to the response
-    const data = userWithDisplayResult.data as User & { displayName: string };
-    console.log("Display Name:", data.displayName);
   }
 
   console.log("\n---\n");
