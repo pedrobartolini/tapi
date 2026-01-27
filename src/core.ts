@@ -39,7 +39,7 @@ function createNestedMethods<TError = string>(
   prefetchCallback: Types.PrefetchCallback | undefined,
   postfetchCallback: Types.PostfetchCallback<any, TError> | undefined,
   defaultHeaders: Record<string, string> | undefined,
-  errorHandler: (response: Response) => Promise<TError>,
+  errorHandler: ((response: Response) => Promise<TError>) | undefined,
   language: Language = "en"
 ) {
   // Store headers and update function references for use by setHeaders method
@@ -87,8 +87,7 @@ export class TapiBuilder<
   TRoutes extends Types.RouteDefinitions = {},
   TError = string,
   THasHost extends boolean = false,
-  THasRoutes extends boolean = false,
-  THasErrorHandler extends boolean = false
+  THasRoutes extends boolean = false
 > {
   private host?: string;
   private routes?: TRoutes;
@@ -101,8 +100,8 @@ export class TapiBuilder<
   /**
    * Set the host URL for API requests
    */
-  withHost(host: string): TapiBuilder<TRoutes, TError, true, THasRoutes, THasErrorHandler> {
-    const builder = new TapiBuilder<TRoutes, TError, true, THasRoutes, THasErrorHandler>();
+  withHost(host: string): TapiBuilder<TRoutes, TError, true, THasRoutes> {
+    const builder = new TapiBuilder<TRoutes, TError, true, THasRoutes>();
     builder.host = host;
     builder.routes = this.routes;
     builder.prefetchCallback = this.prefetchCallback;
@@ -116,8 +115,8 @@ export class TapiBuilder<
   /**
    * Set the route definitions with proper type inference
    */
-  withRoutes<T extends Types.RouteDefinitions>(routes: T): TapiBuilder<T, TError, THasHost, true, THasErrorHandler> {
-    const builder = new TapiBuilder<T, TError, THasHost, true, THasErrorHandler>();
+  withRoutes<T extends Types.RouteDefinitions>(routes: T): TapiBuilder<T, TError, THasHost, true> {
+    const builder = new TapiBuilder<T, TError, THasHost, true>();
     builder.host = this.host;
     builder.routes = routes;
     builder.prefetchCallback = this.prefetchCallback;
@@ -131,8 +130,8 @@ export class TapiBuilder<
   /**
    * Set the error handler with proper type inference
    */
-  withApiError<T>(errorHandler: (response: Response) => Promise<T>): TapiBuilder<TRoutes, T, THasHost, THasRoutes, true> {
-    const builder = new TapiBuilder<TRoutes, T, THasHost, THasRoutes, true>();
+  withApiError<T>(errorHandler: (response: Response) => Promise<T>): TapiBuilder<TRoutes, T, THasHost, THasRoutes> {
+    const builder = new TapiBuilder<TRoutes, T, THasHost, THasRoutes>();
     builder.host = this.host;
     builder.routes = this.routes;
     builder.prefetchCallback = this.prefetchCallback;
@@ -146,8 +145,8 @@ export class TapiBuilder<
   /**
    * Set the prefetch callback that runs before each request
    */
-  withPrefetch(callback: Types.PrefetchCallback): TapiBuilder<TRoutes, TError, THasHost, THasRoutes, THasErrorHandler> {
-    const builder = new TapiBuilder<TRoutes, TError, THasHost, THasRoutes, THasErrorHandler>();
+  withPrefetch(callback: Types.PrefetchCallback): TapiBuilder<TRoutes, TError, THasHost, THasRoutes> {
+    const builder = new TapiBuilder<TRoutes, TError, THasHost, THasRoutes>();
     builder.host = this.host;
     builder.routes = this.routes;
     builder.prefetchCallback = callback;
@@ -161,8 +160,8 @@ export class TapiBuilder<
   /**
    * Set the postfetch callback that runs after each request
    */
-  withPostfetch(callback: Types.PostfetchCallback<any, TError>): TapiBuilder<TRoutes, TError, THasHost, THasRoutes, THasErrorHandler> {
-    const builder = new TapiBuilder<TRoutes, TError, THasHost, THasRoutes, THasErrorHandler>();
+  withPostfetch(callback: Types.PostfetchCallback<any, TError>): TapiBuilder<TRoutes, TError, THasHost, THasRoutes> {
+    const builder = new TapiBuilder<TRoutes, TError, THasHost, THasRoutes>();
     builder.host = this.host;
     builder.routes = this.routes;
     builder.prefetchCallback = this.prefetchCallback;
@@ -176,8 +175,8 @@ export class TapiBuilder<
   /**
    * Set default headers for all requests
    */
-  withDefaultHeaders(headers: Record<string, string>): TapiBuilder<TRoutes, TError, THasHost, THasRoutes, THasErrorHandler> {
-    const builder = new TapiBuilder<TRoutes, TError, THasHost, THasRoutes, THasErrorHandler>();
+  withDefaultHeaders(headers: Record<string, string>): TapiBuilder<TRoutes, TError, THasHost, THasRoutes> {
+    const builder = new TapiBuilder<TRoutes, TError, THasHost, THasRoutes>();
     builder.host = this.host;
     builder.routes = this.routes;
     builder.prefetchCallback = this.prefetchCallback;
@@ -191,8 +190,8 @@ export class TapiBuilder<
   /**
    * Set the language for error messages
    */
-  withLanguage(language: Language): TapiBuilder<TRoutes, TError, THasHost, THasRoutes, THasErrorHandler> {
-    const builder = new TapiBuilder<TRoutes, TError, THasHost, THasRoutes, THasErrorHandler>();
+  withLanguage(language: Language): TapiBuilder<TRoutes, TError, THasHost, THasRoutes> {
+    const builder = new TapiBuilder<TRoutes, TError, THasHost, THasRoutes>();
     builder.host = this.host;
     builder.routes = this.routes;
     builder.prefetchCallback = this.prefetchCallback;
@@ -209,17 +208,14 @@ export class TapiBuilder<
    * This method enforces that all required configurations are set:
    * - Host URL
    * - Route definitions
-   * - Error handler
    */
   build(
     ...args: THasHost extends false
       ? ["Host is required - use .withHost() first"]
       : THasRoutes extends false
         ? ["Routes are required - use .withRoutes() first"]
-        : THasErrorHandler extends false
-          ? ["Error handler is required - use .withApiError() first"]
-          : []
-  ): THasHost extends true ? (THasRoutes extends true ? (THasErrorHandler extends true ? GenerateApiMethods<TRoutes, TError> : never) : never) : never {
+        : []
+  ): THasHost extends true ? (THasRoutes extends true ? GenerateApiMethods<TRoutes, TError> : never) : never {
     const apiMethods: any = {};
     createNestedMethods(
       this.host as string,
@@ -228,7 +224,7 @@ export class TapiBuilder<
       this.prefetchCallback,
       this.postfetchCallback,
       this.defaultHeaders,
-      this.errorHandler as (response: Response) => Promise<TError>,
+      this.errorHandler,
       this.language
     );
     return apiMethods as any;

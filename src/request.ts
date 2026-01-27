@@ -18,7 +18,7 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
   prefetchCallback: Types.PrefetchCallback | undefined,
   postfetchCallback: Types.PostfetchCallback<ResponseSchema.InferResult<TConfig["response"]>, TError> | undefined,
   defaultHeaders: Record<string, string> | undefined,
-  errorHandler: (response: Response) => Promise<TError>,
+  errorHandler: ((response: Response) => Promise<TError>) | undefined,
   language: Language = "en"
 ): Types.RequesterFunction<TConfig, TError> {
   const translations = t(language);
