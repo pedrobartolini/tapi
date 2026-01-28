@@ -32,21 +32,12 @@ export function useHook<T extends Types.RequestConfig<any, any, any, any, any, a
   const [error, setError] = useState<Types.Errors<TError> | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const requestParams = useDeepCompareMemo(
-    callParams
-      ? {
-          body: callParams.body,
-          query: callParams.query,
-          headers: callParams.headers,
-          path: callParams.path
-        }
-      : null
-  );
+  const memoizedParams = useDeepCompareMemo(callParams);
 
   const fetchData = useDeepCompareCallback(async () => {
-    if (!callParams) return true;
+    if (!memoizedParams) return true;
 
-    const result = await requester(callParams);
+    const result = await requester(memoizedParams);
 
     if (!result.ok) {
       setData(null);
@@ -59,14 +50,14 @@ export function useHook<T extends Types.RequestConfig<any, any, any, any, any, a
     setError(null);
     setLoading(false);
     return true;
-  }, [requester, requestParams, callParams]);
+  }, [requester, memoizedParams]);
 
   useEffect(() => {
     // Don't fetch if callParams is null or in lazy mode
-    if (!callParams || callParams.lazy) return;
+    if (!memoizedParams || memoizedParams.lazy) return;
 
     fetchData();
-  }, [fetchData, callParams]);
+  }, [fetchData, memoizedParams]);
 
   const setter = useCallback((callback: (prev: ResponseSchema.InferResult<T["response"]>) => ResponseSchema.InferResult<T["response"]>) => {
     setData((prev: any) => {
