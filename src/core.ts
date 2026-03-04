@@ -3,8 +3,14 @@ import * as RequestCreator from "./request";
 import { Language } from "./translations";
 import * as Types from "./types";
 
+type PathBuilderSignature<T extends Types.RequestConfig<any, any, any, any, any, any, any>> =
+  Types.ExtractPath<T> extends undefined
+    ? () => string
+    : (params: Types.ExtractPath<T>) => string;
+
 type RouteFunction<T extends Types.RequestConfig<any, any, any, any, any, any, any>, TError = string> = Types.RequesterFunction<T, TError> & {
   useHook: (params: (Types.CallSignature<T> & { lazy?: boolean }) | null) => Hook.HookResponse<T, TError>;
+  path: PathBuilderSignature<T>;
 };
 
 export type GenerateApiMethods<T extends Types.RouteDefinitions, TError = string> = {
@@ -51,6 +57,15 @@ function createNestedMethods<TError = string>(
       const requester = RequestCreator.create(host, routeValue, prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language);
       const hook = (params: any) => Hook.useHook<any, TError>(requester, params);
       (requester as any).useHook = hook;
+      (requester as any).path = (params?: Record<string, string>) => {
+        let url = routeValue.endpoint;
+        if (params) {
+          for (const [key, value] of Object.entries(params)) {
+            url = url.replace(`:${key}`, encodeURIComponent(String(value)));
+          }
+        }
+        return `${host}${url}`;
+      };
       target[routeName] = requester;
       updateTargets.push({ target: routeName, config: routeValue });
     } else if (typeof routeValue === "object" && routeValue !== null) {
@@ -68,6 +83,15 @@ function createNestedMethods<TError = string>(
       const requester = RequestCreator.create(host, item.config, prefetchCallback, postfetchCallback, headers, errorHandler, language);
       const hook = (params: any) => Hook.useHook<any, TError>(requester, params);
       (requester as any).useHook = hook;
+      (requester as any).path = (params?: Record<string, string>) => {
+        let url = item.config.endpoint;
+        if (params) {
+          for (const [key, value] of Object.entries(params)) {
+            url = url.replace(`:${key}`, encodeURIComponent(String(value)));
+          }
+        }
+        return `${host}${url}`;
+      };
       target[item.target] = requester;
     }
 

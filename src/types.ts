@@ -35,7 +35,7 @@ type InferQueryParam<TQuery> = TQuery extends undefined ? { query?: never } : { 
 type InferHeaderParam<THeaders> = THeaders extends undefined ? { headers?: never } : { headers: THeaders };
 
 // Extract types from RequestConfig
-type ExtractPath<T> = T extends RequestConfig<any, infer P, any, any, any, any, any> ? P : undefined;
+export type ExtractPath<T> = T extends RequestConfig<any, infer P, any, any, any, any, any> ? P : undefined;
 type ExtractBody<T> = T extends RequestConfig<any, any, infer B, any, any, any, any> ? B : undefined;
 type ExtractFormData<T> = T extends RequestConfig<any, any, any, infer F, any, any, any> ? F : undefined;
 type ExtractQuery<T> = T extends RequestConfig<any, any, any, any, infer Q, any, any> ? Q : undefined;
