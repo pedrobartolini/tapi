@@ -45,13 +45,13 @@ export type RequesterParams<T extends RequestConfig<any, any, any, any, any, any
   InferBodyParam<ExtractBody<T>> &
   InferFormDataParam<ExtractFormData<T>> &
   InferQueryParam<ExtractQuery<T>> &
-  InferHeaderParam<ExtractHeaders<T>>;
+  InferHeaderParam<ExtractHeaders<T>> & { signal?: AbortSignal };
 
 export type CallSignature<T extends RequestConfig<any, any, any, any, any, any, any>> = InferPathParam<ExtractPath<T>> &
   InferBodyParam<ExtractBody<T>> &
   InferFormDataParam<ExtractFormData<T>> &
   InferQueryParam<ExtractQuery<T>> &
-  InferHeaderParam<ExtractHeaders<T>>;
+  InferHeaderParam<ExtractHeaders<T>> & { signal?: AbortSignal };
 
 // Prefetch and postfetch callback types
 export type PrefetchCallback = (args: { url: string; method: HttpMethod; headers: Headers; body?: BodyInit | null }) => Promise<void> | void;

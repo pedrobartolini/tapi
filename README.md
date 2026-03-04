@@ -135,6 +135,21 @@ function removeUser(id: string) {
 }
 ```
 
+## Cancellation
+
+Hooks automatically cancel in-flight requests when params change or the component unmounts — no stale responses.
+
+For imperative calls, pass an `AbortSignal`:
+
+```ts
+const controller = new AbortController()
+
+api.getUser({ path: { id: "1" }, signal: controller.signal })
+
+// Cancel the request
+controller.abort()
+```
+
 ## Nested routes
 
 Group related endpoints under namespaces:
@@ -248,6 +263,18 @@ const response = await api.getUser({ path: { id: "1" } })
 if (!response.ok && response.status === "api_error") {
   console.log(response.data.code) // typed as ApiError
 }
+```
+
+### Credentials
+
+Set the `credentials` mode for all requests (e.g. cross-origin cookies):
+
+```ts
+const api = Tapi.builder()
+  .withHost("https://api.example.com")
+  .withCredentials("include")
+  .withRoutes(routes)
+  .build()
 ```
 
 ### Default headers

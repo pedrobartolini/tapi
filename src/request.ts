@@ -19,7 +19,8 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
   postfetchCallback: Types.PostfetchCallback<ResponseSchema.InferResult<TConfig["response"]>, TError> | undefined,
   defaultHeaders: Record<string, string> | undefined,
   errorHandler: ((response: Response) => Promise<TError>) | undefined,
-  language: Language = "en"
+  language: Language = "en",
+  credentials?: RequestCredentials
 ): Types.RequesterFunction<TConfig, TError> {
   const translations = t(language);
 
@@ -58,10 +59,10 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
           await Promise.resolve(prefetchCallback({ url, method: config.method, headers, body }));
         }
 
-        const responseOrError = await Utils.executeRequest(url, config, params, defaultHeaders, language);
+        const responseOrError = await Utils.executeRequest(url, config, params, defaultHeaders, language, credentials);
         if ("error" in responseOrError) {
           const nError = { ...responseOrError, endpoint: url, method: config.method };
-          dispatchPostFetchCallback(postfetchCallback, nError);
+          if (!params.signal?.aborted) dispatchPostFetchCallback(postfetchCallback, nError);
           return nError;
         }
 
@@ -83,7 +84,7 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
       } catch (error) {
         const networkError = Errors.createNetworkError(translations.errors.requestFailed, error instanceof Error ? error : new Error(String(error)));
         const nError = { ...networkError, endpoint: config.endpoint, method: config.method };
-        dispatchPostFetchCallback(postfetchCallback, nError);
+        if (!params.signal?.aborted) dispatchPostFetchCallback(postfetchCallback, nError);
         return nError;
       }
     };

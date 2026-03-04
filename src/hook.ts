@@ -11,11 +11,6 @@ function useDeepCompareMemo<T>(value: T): T {
   return ref.current;
 }
 
-function useDeepCompareCallback<T extends (...args: any[]) => any>(fn: T, deps: any[]): T {
-  const memoDeps = useDeepCompareMemo(deps);
-  return useCallback(fn, memoDeps);
-}
-
 export type RefreshFunction = (resetState?: boolean) => Promise<boolean>;
 type SetterFunction<T> = (callback: (prev: T) => T) => void;
 
@@ -34,29 +29,36 @@ export function useHook<T extends Types.RequestConfig<any, any, any, any, any, a
 
   const memoizedParams = useDeepCompareMemo(callParams);
 
-  const fetchData = useDeepCompareCallback(async () => {
-    if (!memoizedParams) return true;
+  const fetchData = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!memoizedParams) return true;
 
-    const result = await requester(memoizedParams);
+      const result = await requester({ ...memoizedParams, signal });
 
-    if (!result.ok) {
-      setData(null);
-      setError(result as Types.Errors<TError>);
+      if (signal?.aborted) return true;
+
+      if (!result.ok) {
+        setData(null);
+        setError(result as Types.Errors<TError>);
+        setLoading(false);
+        return false;
+      }
+
+      setData(result.data);
+      setError(null);
       setLoading(false);
-      return false;
-    }
-
-    setData(result.data);
-    setError(null);
-    setLoading(false);
-    return true;
-  }, [requester, memoizedParams]);
+      return true;
+    },
+    [requester, memoizedParams]
+  );
 
   useEffect(() => {
-    // Don't fetch if callParams is null or in lazy mode
     if (!memoizedParams || memoizedParams.lazy) return;
 
-    fetchData();
+    const controller = new AbortController();
+    fetchData(controller.signal);
+
+    return () => controller.abort();
   }, [fetchData, memoizedParams]);
 
   const setter = useCallback((callback: (prev: ResponseSchema.InferResult<T["response"]>) => ResponseSchema.InferResult<T["response"]>) => {

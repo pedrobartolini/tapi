@@ -46,7 +46,8 @@ function createNestedMethods<TError = string>(
   postfetchCallback: Types.PostfetchCallback<any, TError> | undefined,
   defaultHeaders: Record<string, string> | undefined,
   errorHandler: ((response: Response) => Promise<TError>) | undefined,
-  language: Language = "en"
+  language: Language = "en",
+  credentials?: RequestCredentials
 ) {
   // Store headers and update function references for use by setHeaders method
   let currentHeaders = defaultHeaders;
@@ -54,7 +55,7 @@ function createNestedMethods<TError = string>(
 
   for (const [routeName, routeValue] of Object.entries(routes)) {
     if (isRequestConfig(routeValue)) {
-      const requester = RequestCreator.create(host, routeValue, prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language);
+      const requester = RequestCreator.create(host, routeValue, prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language, credentials);
       const hook = (params: any) => Hook.useHook<any, TError>(requester, params);
       (requester as any).useHook = hook;
       (requester as any).path = (params?: Record<string, string>) => {
@@ -70,7 +71,7 @@ function createNestedMethods<TError = string>(
       updateTargets.push({ target: routeName, config: routeValue });
     } else if (typeof routeValue === "object" && routeValue !== null) {
       target[routeName] = {};
-      createNestedMethods(host, routeValue as Types.RouteDefinitions, target[routeName], prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language);
+      createNestedMethods(host, routeValue as Types.RouteDefinitions, target[routeName], prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language, credentials);
     }
   }
 
@@ -80,7 +81,7 @@ function createNestedMethods<TError = string>(
 
     // Update existing routes with new headers
     for (const item of updateTargets) {
-      const requester = RequestCreator.create(host, item.config, prefetchCallback, postfetchCallback, headers, errorHandler, language);
+      const requester = RequestCreator.create(host, item.config, prefetchCallback, postfetchCallback, headers, errorHandler, language, credentials);
       const hook = (params: any) => Hook.useHook<any, TError>(requester, params);
       (requester as any).useHook = hook;
       (requester as any).path = (params?: Record<string, string>) => {
@@ -120,6 +121,7 @@ export class TapiBuilder<
   private defaultHeaders?: Record<string, string>;
   private errorHandler?: (response: Response) => Promise<TError>;
   private language: Language = "en";
+  private credentials?: RequestCredentials;
 
   /**
    * Set the host URL for API requests
@@ -133,6 +135,7 @@ export class TapiBuilder<
     builder.defaultHeaders = this.defaultHeaders;
     builder.errorHandler = this.errorHandler;
     builder.language = this.language;
+    builder.credentials = this.credentials;
     return builder;
   }
 
@@ -148,6 +151,7 @@ export class TapiBuilder<
     builder.defaultHeaders = this.defaultHeaders;
     builder.errorHandler = this.errorHandler;
     builder.language = this.language;
+    builder.credentials = this.credentials;
     return builder;
   }
 
@@ -163,6 +167,7 @@ export class TapiBuilder<
     builder.defaultHeaders = this.defaultHeaders;
     builder.errorHandler = errorHandler;
     builder.language = this.language;
+    builder.credentials = this.credentials;
     return builder;
   }
 
@@ -178,6 +183,7 @@ export class TapiBuilder<
     builder.defaultHeaders = this.defaultHeaders;
     builder.errorHandler = this.errorHandler;
     builder.language = this.language;
+    builder.credentials = this.credentials;
     return builder;
   }
 
@@ -193,6 +199,7 @@ export class TapiBuilder<
     builder.defaultHeaders = this.defaultHeaders;
     builder.errorHandler = this.errorHandler;
     builder.language = this.language;
+    builder.credentials = this.credentials;
     return builder;
   }
 
@@ -208,6 +215,7 @@ export class TapiBuilder<
     builder.defaultHeaders = headers;
     builder.errorHandler = this.errorHandler;
     builder.language = this.language;
+    builder.credentials = this.credentials;
     return builder;
   }
 
@@ -223,6 +231,23 @@ export class TapiBuilder<
     builder.defaultHeaders = this.defaultHeaders;
     builder.errorHandler = this.errorHandler;
     builder.language = language;
+    builder.credentials = this.credentials;
+    return builder;
+  }
+
+  /**
+   * Set the credentials mode for all requests (e.g. "include" for cross-origin cookies)
+   */
+  withCredentials(credentials: RequestCredentials): TapiBuilder<TRoutes, TError, THasHost, THasRoutes> {
+    const builder = new TapiBuilder<TRoutes, TError, THasHost, THasRoutes>();
+    builder.host = this.host;
+    builder.routes = this.routes;
+    builder.prefetchCallback = this.prefetchCallback;
+    builder.postfetchCallback = this.postfetchCallback;
+    builder.defaultHeaders = this.defaultHeaders;
+    builder.errorHandler = this.errorHandler;
+    builder.language = this.language;
+    builder.credentials = credentials;
     return builder;
   }
 
@@ -249,7 +274,8 @@ export class TapiBuilder<
       this.postfetchCallback,
       this.defaultHeaders,
       this.errorHandler,
-      this.language
+      this.language,
+      this.credentials
     );
     return apiMethods as any;
   }

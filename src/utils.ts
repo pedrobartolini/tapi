@@ -23,7 +23,8 @@ export async function executeRequest<T extends Types.RequestConfig<any, any, any
   config: T,
   params: Types.RequesterParams<T>,
   defaultHeaders?: Record<string, string>,
-  language: Language = "en"
+  language: Language = "en",
+  credentials?: RequestCredentials
 ): Promise<Response | Types.NetworkError> {
   const translations = t(language);
   const headers = new Headers({ ...defaultHeaders });
@@ -58,7 +59,7 @@ export async function executeRequest<T extends Types.RequestConfig<any, any, any
   }
 
   try {
-    return await fetch(url, { method: config.method, headers, body });
+    return await fetch(url, { method: config.method, headers, body, signal: params.signal, credentials });
   } catch (error) {
     return Errors.createNetworkError(translations.errors.requestFailed, error instanceof Error ? error : new Error(String(error)));
   }
