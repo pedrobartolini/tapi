@@ -6,6 +6,8 @@ export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
  * Request configuration with pure TypeScript types
  * Types are passed via generics, not runtime schemas
  */
+export type ResponseType = "json" | "blob";
+
 export type RequestConfig<
   TMethod extends HttpMethod = HttpMethod,
   TPath = undefined,
@@ -18,6 +20,7 @@ export type RequestConfig<
   method: TMethod;
   endpoint: string;
   response: ResponseSchema.ResponseConfig<TResponse>;
+  responseType?: ResponseType;
 };
 
 export type RouteDefinitions = {
