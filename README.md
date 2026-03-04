@@ -1,280 +1,322 @@
-# Tapi
+# tapi
 
-A type-safe REST API client builder for TypeScript with React hooks integration.
+Type-safe REST API client for TypeScript with React hooks. Pure compile-time types — no runtime schemas, no codegen.
 
-## Features
-
-- **Type Safety** - Full TypeScript support with compile-time type checking
-- **Error as Value** - No thrown errors, all errors returned as discriminated unions
-- **React Hooks** - Built-in React integration with loading states
-- **Zero Runtime Validation** - Pure TypeScript types, no runtime overhead
-- **Lightweight** - No external validation library dependencies
-- **Auto-completion** - Full IDE support with IntelliSense
-- **Internationalization** - Multi-language support for error messages
-
-## Installation
+## Install
 
 ```bash
-npm install tapi
+npm install tapi-rs
 ```
 
-## Quick Start
+## Quick start
 
-```typescript
-import Tapi from "tapi";
+```ts
+import Tapi from "tapi-rs"
 
-// 1. Define your types
-type User = {
-  id: number;
-  name: string;
-  email: string;
-};
+// Define routes
+const routes = {
+  getUsers: Tapi.get<{ response: User[] }>()({ endpoint: "/users" }),
+  getUser: Tapi.get<{ path: { id: string }; response: User }>()({ endpoint: "/users/:id" }),
+  createUser: Tapi.post<{ body: CreateUser; response: User }>()({ endpoint: "/users" }),
+}
 
-// 2. Build your API client
+// Build the client
 const api = Tapi.builder()
   .withHost("https://api.example.com")
-  .withApiError(async (res) => ({ code: res.status, message: res.statusText }))
-  .withRoutes({
-    users: {
-      getAll: Tapi.get<{ response: User[] }>()({
-        endpoint: "/users",
-        response: Tapi.response<User[]>()
-      }),
-      getById: Tapi.get<{ path: { id: string }; response: User }>()({
-        endpoint: "/users/:id",
-        response: Tapi.response<User>()
-      }),
-      create: Tapi.post<{ body: { name: string; email: string }; response: User }>()({
-        endpoint: "/users",
-        response: Tapi.response<User>()
-      })
-    }
-  })
-  .build();
+  .withRoutes(routes)
+  .build()
 
-// 3. Use it
-const result = await api.users.getAll({});
-if (result.ok) {
-  console.log(result.data); // Fully typed User[]
+// Make requests
+const response = await api.getUser({ path: { id: "1" } })
+
+if (response.ok) {
+  console.log(response.data) // User — fully typed
 }
 ```
 
-## Type Parameters
+## Defining routes
 
-Tapi uses object-based type parameters - only specify what you need:
+Each route is created with `Tapi.get`, `Tapi.post`, `Tapi.put`, `Tapi.patch`, or `Tapi.delete`. Pass a type object specifying only the params you need:
 
-```typescript
-// Simple - just response type
-Tapi.get<{ response: User[] }>();
+```ts
+// GET with query params
+Tapi.get<{
+  query: { page: number; limit: number }
+  response: { users: User[]; total: number }
+}>()({ endpoint: "/users" })
 
-// With path params
-Tapi.get<{ path: { id: string }; response: User }>();
+// POST with body
+Tapi.post<{
+  body: { name: string; email: string }
+  response: User
+}>()({ endpoint: "/users" })
 
-// With query params
-Tapi.get<{ query: { limit?: number }; response: Post[] }>();
+// PUT with path + body
+Tapi.put<{
+  path: { id: string }
+  body: Partial<User>
+  response: User
+}>()({ endpoint: "/users/:id" })
 
-// With body (for POST/PUT/PATCH)
-Tapi.post<{ body: CreateUser; response: User }>();
-
-// With headers
-Tapi.get<{ headers: { Authorization: string }; response: User }>();
-
-// With formData
-Tapi.post<{ formData: { file: File }; response: UploadResult }>();
+// DELETE with path
+Tapi.delete<{
+  path: { id: string }
+  response: { deleted: boolean }
+}>()({ endpoint: "/users/:id" })
 ```
 
-## Error Handling
+Available type params: `path`, `body`, `formData`, `query`, `headers`, `response`.
 
-All API calls return a discriminated union with an `ok` boolean:
+## React hooks
 
-```typescript
-const result = await api.users.getById({ path: { id: "123" } });
+Every route function has a `.useHook()` method:
 
-if (result.ok) {
-  console.log("User:", result.data);
-} else {
-  switch (result.status) {
-    case "network_error":
-      console.error("Network failed:", result.error);
-      break;
-    case "api_error":
-      console.error(`API error [${result.code}]:`, result.data);
-      break;
-    case "mapper_error":
-      console.error("Mapper failed:", result.error);
-      break;
-  }
-}
-```
-
-## React Integration
-
-Use the built-in React hooks for automatic loading states:
-
-```typescript
+```tsx
 function UserProfile({ userId }: { userId: string }) {
-  const [user, error, loading, refresh, setUser] = api.users.getById.useHook({
-    path: { id: userId }
-  });
+  const [user, error, loading, refresh, setUser] = api.getUser.useHook({
+    path: { id: userId },
+  })
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
+  if (loading) return <p>Loading...</p>
+  if (error) return <p>Error: {error.message}</p>
 
   return (
     <div>
       <h1>{user.name}</h1>
-      <p>{user.email}</p>
       <button onClick={() => refresh()}>Refresh</button>
     </div>
-  );
+  )
 }
 ```
 
-### Hook Return Value
+### Hook return value
 
-```typescript
-const [data, error, loading, refresh, setter] = api.endpoint.useHook(params);
+Returns a tuple `[data, error, loading, refresh, setter]`:
 
-// data    - The response data (null if loading or error)
-// error   - The error object (null if success or loading)
-// loading - Boolean loading state
-// refresh - Function to refetch (pass true to reset state)
-// setter  - Function to update data locally
+| Index | Value | Type |
+|-------|-------|------|
+| 0 | `data` | `T \| null` — response data |
+| 1 | `error` | `Errors<TError> \| null` — error details |
+| 2 | `loading` | `boolean` |
+| 3 | `refresh` | `(resetState?: boolean) => Promise<boolean>` |
+| 4 | `setter` | `(fn: (prev: T) => T) => void` — optimistic updates |
+
+### Skip fetching
+
+Pass `null` to disable auto-fetching entirely:
+
+```tsx
+const [user] = api.getUser.useHook(null)
 ```
 
-### Lazy Loading
+### Lazy mode
 
-```typescript
-const [user, error, loading, refresh] = api.users.getById.useHook({
-  path: { id: userId },
-  lazy: true // Don't fetch on mount
-});
+Pass `lazy: true` to create the hook without auto-fetching. Call `refresh()` to trigger manually:
 
-// Trigger fetch manually
-<button onClick={() => refresh(true)}>Load User</button>
+```tsx
+const [result, error, loading, submit] = api.createUser.useHook({
+  body: { name: "Alice", email: "alice@example.com" },
+  lazy: true,
+})
+
+// Trigger the request manually
+await submit()
 ```
 
-## Response Mappers
+### Optimistic updates
 
-Transform API responses with type-safe mappers:
+Use the setter to update local data without refetching:
 
-```typescript
-type ApiUser = { id: number; full_name: string };
-type User = { id: number; name: string };
+```tsx
+const [users, error, loading, refresh, setUsers] = api.getUsers.useHook({})
+
+function removeUser(id: string) {
+  setUsers((prev) => prev.filter((u) => u.id !== id))
+}
+```
+
+## Nested routes
+
+Group related endpoints under namespaces:
+
+```ts
+const routes = {
+  users: {
+    list: Tapi.get<{ response: User[] }>()({ endpoint: "/users" }),
+    create: Tapi.post<{ body: CreateUser; response: User }>()({ endpoint: "/users" }),
+  },
+  posts: {
+    list: Tapi.get<{ response: Post[] }>()({ endpoint: "/posts" }),
+    get: Tapi.get<{ path: { id: string }; response: Post }>()({ endpoint: "/posts/:id" }),
+  },
+}
 
 const api = Tapi.builder()
   .withHost("https://api.example.com")
-  .withApiError(async (res) => ({ code: res.status }))
-  .withRoutes({
-    users: {
-      getById: Tapi.get<{
-        path: { id: string };
-        response: ApiUser;
-        mapped: User;
-      }>()({
-        endpoint: "/users/:id",
-        response: Tapi.response<ApiUser, User>((data) => () => ({
-          id: data.id,
-          name: data.full_name
-        }))
-      })
-    }
-  })
-  .build();
+  .withRoutes(routes)
+  .build()
 
-// result.data is typed as User (mapped type)
-const result = await api.users.getById({ path: { id: "123" } });
+const response = await api.users.list({})
+const [posts] = api.posts.list.useHook({})
 ```
 
-### Mappers with Arguments
+## Response handling
 
-```typescript
-const api = Tapi.builder()
-  .withHost("https://api.example.com")
-  .withApiError(async (res) => ({ code: res.status }))
-  .withRoutes({
-    posts: {
-      getAll: Tapi.get<{
-        response: Post[];
-        mapped: Post[];
-        mapArg: { limit: number };
-      }>()({
-        endpoint: "/posts",
-        response: Tapi.response<Post[], Post[], { limit: number }>((posts) => (args) => posts.slice(0, args.limit))
-      })
-    }
-  })
-  .build();
+Every request returns an `ApiResponse` — a discriminated union you can narrow with `response.ok`:
 
-// Pass mapper arguments at call time
-const result = await api.posts.getAll({ map: { limit: 5 } });
+```ts
+const response = await api.getUser({ path: { id: "1" } })
+
+if (response.ok) {
+  // Success — response.data is typed
+  console.log(response.data)
+} else if (response.status === "api_error") {
+  // Server returned an error — response.code, response.message, response.data
+  console.log(response.code, response.data)
+} else {
+  // Network error — response.error is the original Error
+  console.log(response.error)
+}
 ```
 
-## Advanced Configuration
+## FormData & file uploads
 
-```typescript
+Use `formData` instead of `body` for multipart requests:
+
+```ts
+const routes = {
+  uploadAvatar: Tapi.post<{
+    path: { userId: string }
+    formData: { avatar: File; description: string }
+    response: { url: string }
+  }>()({ endpoint: "/users/:userId/avatar" }),
+}
+
+await api.uploadAvatar({
+  path: { userId: "1" },
+  formData: { avatar: file, description: "Profile picture" },
+})
+```
+
+File arrays are supported — each file is appended individually to the FormData.
+
+## Blob responses
+
+Set `responseType: "blob"` for binary data:
+
+```ts
+const routes = {
+  downloadReport: Tapi.get<{
+    path: { id: string }
+    response: Blob
+  }>()({ endpoint: "/reports/:id/download", responseType: "blob" }),
+}
+```
+
+## URL building
+
+Every route function has a `.path()` method to build the full URL without making a request:
+
+```ts
+api.getUser.path({ id: "42" })
+// => "https://api.example.com/users/42"
+
+api.getUsers.path()
+// => "https://api.example.com/users"
+```
+
+## Builder options
+
+### Custom error handling
+
+Parse your API's error format:
+
+```ts
+type ApiError = { code: string; details: string[] }
+
 const api = Tapi.builder()
   .withHost("https://api.example.com")
-  .withApiError(async (response) => {
-    const error = await response.json();
-    return {
-      message: error.message || "Unknown error",
-      code: response.status,
-      details: error
-    };
+  .withApiError<ApiError>(async (response) => {
+    const body = await response.json()
+    return { code: body.error_code, details: body.messages }
   })
-  .withDefaultHeaders({
-    Authorization: "Bearer <token>",
-    "Content-Type": "application/json"
+  .withRoutes(routes)
+  .build()
+
+const response = await api.getUser({ path: { id: "1" } })
+
+if (!response.ok && response.status === "api_error") {
+  console.log(response.data.code) // typed as ApiError
+}
+```
+
+### Default headers
+
+```ts
+const api = Tapi.builder()
+  .withHost("https://api.example.com")
+  .withDefaultHeaders({ Authorization: "Bearer token" })
+  .withRoutes(routes)
+  .build()
+
+// Update headers at runtime
+api.setHeaders({ Authorization: "Bearer new-token" })
+```
+
+### Prefetch callback
+
+Runs before every request — useful for injecting auth:
+
+```ts
+const api = Tapi.builder()
+  .withHost("https://api.example.com")
+  .withPrefetch(async ({ url, method, headers }) => {
+    const token = await getAccessToken()
+    headers.set("Authorization", `Bearer ${token}`)
   })
-  .withPrefetch((request) => {
-    console.log(`[${request.method}] ${request.url}`);
-  })
+  .withRoutes(routes)
+  .build()
+```
+
+### Postfetch callback
+
+Runs after every request — useful for logging or global error handling:
+
+```ts
+const api = Tapi.builder()
+  .withHost("https://api.example.com")
   .withPostfetch((response) => {
-    if (!response.ok) {
-      console.error("Request failed:", response.status);
+    if (!response.ok && response.code === 401) {
+      redirectToLogin()
     }
   })
-  .withLanguage("en") // "en" | "br"
   .withRoutes(routes)
-  .build();
+  .build()
 ```
 
-### Dynamic Headers
+### Language
 
-Update headers at runtime using `setHeaders`:
+Error messages support `"en"` (default) and `"br"` (Brazilian Portuguese):
 
-```typescript
-// Update auth token
-api.setHeaders({
-  Authorization: `Bearer ${newToken}`
-});
-
-// Also works on nested routes
-api.users.setHeaders({ ... });
-```
-
-## Internationalization
-
-Tapi supports multiple languages for error messages:
-
-- `"en"` - English (default)
-- `"br"` - Portuguese (Brazil)
-
-```typescript
+```ts
 const api = Tapi.builder()
   .withHost("https://api.example.com")
-  .withLanguage("br") // Portuguese error messages
-  .withApiError(async (res) => res.statusText)
+  .withLanguage("br")
   .withRoutes(routes)
-  .build();
+  .build()
 ```
 
-## Examples
+## Types
 
-Check the `examples/` folder for comprehensive examples:
+```ts
+import type { ApiResponse, Success, CustomError, NetworkError, Errors } from "tapi-rs"
 
-- **`tapi-example.ts`** - Complete API client with all features
+// ApiResponse<TData, TError> = (Success<TData> | Errors<TError>) & { endpoint: string; method: HttpMethod }
+// Success<T> = { ok: true; status: "success"; data: T }
+// CustomError<T> = { ok: false; code: number; status: "api_error"; message: string; data: T }
+// NetworkError = { ok: false; code: number; status: "network_error"; message: string; error: Error }
+// Errors<T> = NetworkError | CustomError<T>
+```
 
 ## License
 
