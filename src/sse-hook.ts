@@ -47,6 +47,7 @@ export function useSseHook<T extends Types.SseConfig<any, any, any>>(
       },
       () => {
         setError(new Error("SSE connection error"));
+        setLoading(false);
       }
     );
 
