@@ -23,8 +23,18 @@ export type RequestConfig<
   responseType?: ResponseType;
 };
 
+export type SseConfig<
+  TPath = undefined,
+  TQuery = undefined,
+  TResponse = unknown
+> = {
+  type: "sse";
+  endpoint: string;
+  response: ResponseSchema.ResponseConfig<TResponse>;
+};
+
 export type RouteDefinitions = {
-  [key: string]: RequestConfig<any, any, any, any, any, any, any> | RouteDefinitions;
+  [key: string]: RequestConfig<any, any, any, any, any, any, any> | SseConfig<any, any, any> | RouteDefinitions;
 };
 
 // Parameter inference types - check if type is defined (not undefined)
@@ -52,6 +62,17 @@ export type CallSignature<T extends RequestConfig<any, any, any, any, any, any, 
   InferFormDataParam<ExtractFormData<T>> &
   InferQueryParam<ExtractQuery<T>> &
   InferHeaderParam<ExtractHeaders<T>> & { signal?: AbortSignal };
+
+type ExtractSsePath<T> = T extends SseConfig<infer P, any, any> ? P : undefined;
+type ExtractSseQuery<T> = T extends SseConfig<any, infer Q, any> ? Q : undefined;
+
+export type SseCallSignature<T extends SseConfig<any, any, any>> =
+  InferPathParam<ExtractSsePath<T>> & InferQueryParam<ExtractSseQuery<T>>;
+
+export type SseListenerFunction<TConfig extends SseConfig<any, any, any>> = (
+  params: SseCallSignature<TConfig>,
+  callback: (data: ResponseSchema.InferResult<TConfig["response"]>) => void
+) => () => void;
 
 // Prefetch and postfetch callback types
 export type PrefetchCallback = (args: { url: string; method: HttpMethod; headers: Headers; body?: BodyInit | null }) => Promise<void> | void;
