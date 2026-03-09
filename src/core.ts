@@ -1,5 +1,7 @@
 import * as Hook from "./hook";
 import * as RequestCreator from "./request";
+import * as Sse from "./sse";
+import * as SseHook from "./sse-hook";
 import { Language } from "./translations";
 import * as Types from "./types";
 
@@ -13,12 +15,18 @@ type RouteFunction<T extends Types.RequestConfig<any, any, any, any, any, any, a
   path: PathBuilderSignature<T>;
 };
 
+type SseRouteFunction<T extends Types.SseConfig<any, any, any>> = Types.SseListenerFunction<T> & {
+  useHook: (params: Types.SseCallSignature<T> | null) => SseHook.SseHookResponse<T>;
+};
+
 export type GenerateApiMethods<T extends Types.RouteDefinitions, TError = string> = {
-  [K in keyof T]: T[K] extends Types.RequestConfig<any, any, any, any, any, any, any>
-    ? RouteFunction<T[K], TError>
-    : T[K] extends Types.RouteDefinitions
-      ? GenerateApiMethods<T[K], TError>
-      : never;
+  [K in keyof T]: T[K] extends Types.SseConfig<any, any, any>
+    ? SseRouteFunction<T[K]>
+    : T[K] extends Types.RequestConfig<any, any, any, any, any, any, any>
+      ? RouteFunction<T[K], TError>
+      : T[K] extends Types.RouteDefinitions
+        ? GenerateApiMethods<T[K], TError>
+        : never;
 } & {
   /**
    * Update default headers for all requests in this API instance
@@ -33,6 +41,12 @@ function isRequestConfig(value: unknown): value is Types.RequestConfig<any, any,
   if (typeof value !== "object" || value === null) return false;
   const v = value as any;
   return typeof v.method === "string" && typeof v.endpoint === "string" && typeof v.response === "object" && v.response !== null;
+}
+
+function isSseConfig(value: unknown): value is Types.SseConfig<any, any, any> {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as any;
+  return v.type === "sse" && typeof v.endpoint === "string";
 }
 
 /**
@@ -54,7 +68,18 @@ function createNestedMethods<TError = string>(
   const updateTargets: Array<any> = [];
 
   for (const [routeName, routeValue] of Object.entries(routes)) {
-    if (isRequestConfig(routeValue)) {
+    if (isSseConfig(routeValue)) {
+      // SSE uses EventSource which does not support custom headers,
+      // so SSE routes are intentionally excluded from setHeaders updates.
+      const sseConfig = routeValue;
+      const sseFunction = (params: any, callback: (data: any) => void) => {
+        const url = Sse.buildSseUrl(host, sseConfig.endpoint, params);
+        return Sse.createConnection(url, callback);
+      };
+      (sseFunction as any).useHook = (params: any) =>
+        SseHook.useSseHook(host, sseConfig, params);
+      target[routeName] = sseFunction;
+    } else if (isRequestConfig(routeValue)) {
       const requester = RequestCreator.create(host, routeValue, prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language, credentials);
       const hook = (params: any) => Hook.useHook<any, TError>(requester, params);
       (requester as any).useHook = hook;
