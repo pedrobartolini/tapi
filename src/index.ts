@@ -1,4 +1,6 @@
 export type { CustomError, Errors, HttpMethod, NetworkError, ApiResponse, Success } from "./types";
+export type { SseConfig, SseCallSignature, SseListenerFunction } from "./types";
+export type { SseHookResponse } from "./sse-hook";
 
 export type { RefreshFunction } from "./hook";
 export type { Language } from "./translations";
@@ -18,7 +20,8 @@ const Tapi = {
   post: Endpoints.post,
   put: Endpoints.put,
   delete: Endpoints.delete,
-  patch: Endpoints.patch
+  patch: Endpoints.patch,
+  sse: Endpoints.sse
 } as const;
 
 export default Tapi;
