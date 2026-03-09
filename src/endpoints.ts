@@ -1,4 +1,4 @@
-import type { HttpMethod, RequestConfig } from "./types";
+import type { HttpMethod, RequestConfig, SseConfig } from "./types";
 
 /**
  * Configuration object for endpoint factories
@@ -73,6 +73,37 @@ function createEndpointFactory<TMethod extends HttpMethod>(method: TMethod) {
     });
 }
 
+type SseEndpointTypes<
+  TPath = undefined,
+  TQuery = undefined,
+  TResponse = unknown
+> = {
+  path?: TPath;
+  query?: TQuery;
+  response?: TResponse;
+};
+
+type ExtractSsePath<T> = T extends { path: infer P } ? P : undefined;
+type ExtractSseQuery<T> = T extends { query: infer Q } ? Q : undefined;
+type ExtractSseResponse<T> = T extends { response: infer R } ? R : unknown;
+
+function createSseEndpointFactory() {
+  return <T extends SseEndpointTypes<any, any, any> = {}>() =>
+    (
+      config: { endpoint: string }
+    ): SseConfig<
+      ExtractSsePath<T>,
+      ExtractSseQuery<T>,
+      ExtractSseResponse<T>
+    > => ({
+      type: "sse" as const,
+      endpoint: config.endpoint,
+      response: {},
+    });
+}
+
+export const sse = createSseEndpointFactory();
+
 // Individual endpoint factories
 export const get = createEndpointFactory("GET");
 export const post = createEndpointFactory("POST");
@@ -86,5 +117,6 @@ export const Endpoints = {
   post,
   put,
   delete: del,
-  patch
+  patch,
+  sse
 } as const;
