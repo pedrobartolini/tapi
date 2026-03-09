@@ -26,7 +26,11 @@ export function createConnection<T>(
   const eventSource = new EventSource(url);
 
   eventSource.onmessage = (event) => {
-    callback(JSON.parse(event.data) as T);
+    try {
+      callback(JSON.parse(event.data) as T);
+    } catch {
+      onError?.(event);
+    }
   };
 
   eventSource.onerror = (event) => {
