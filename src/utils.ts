@@ -83,17 +83,19 @@ export async function handleErrorResponse<TError = string>(
       message = `API error ${response.status}: ${response.statusText}`;
     }
   } else {
+    const text = await response.text();
     try {
-      const errorText = await response.json();
-      if (typeof errorText === "string") {
-        data = errorText as TError;
-        message = errorText;
+      const json = JSON.parse(text);
+      if (typeof json === "string") {
+        data = json as TError;
+        message = json;
       } else {
-        throw new Error(translations.errors.invalidErrorFormat);
+        data = json as TError;
+        message = `API error ${response.status}: ${response.statusText}`;
       }
     } catch {
-      data = `API error ${response.status}: ${response.statusText}` as TError;
-      message = `API error ${response.status}: ${response.statusText}`;
+      data = (text || `API error ${response.status}: ${response.statusText}`) as TError;
+      message = text || `API error ${response.status}: ${response.statusText}`;
     }
   }
 

@@ -75,7 +75,12 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
         }
 
         // Parse response data (no validation, trust the types)
-        const data = config.responseType === "blob" ? await response.blob() : await response.json();
+        const data =
+          config.responseType === "blob"
+            ? await response.blob()
+            : config.responseType === "text"
+              ? await response.text()
+              : await response.json();
 
         const successResult = Errors.createSuccess(data);
         const nResult = { ...successResult, endpoint: config.endpoint, method: config.method };

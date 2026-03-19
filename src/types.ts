@@ -6,7 +6,7 @@ export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
  * Request configuration with pure TypeScript types
  * Types are passed via generics, not runtime schemas
  */
-export type ResponseType = "json" | "blob";
+export type ResponseType = "json" | "blob" | "text";
 
 export type RequestConfig<
   TMethod extends HttpMethod = HttpMethod,
