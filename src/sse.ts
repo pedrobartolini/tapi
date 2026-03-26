@@ -1,3 +1,11 @@
+export type SseConnectionStatus = "connecting" | "open" | "error" | "stopped";
+
+export type SseConnection = {
+  connect: () => void;
+  stop: () => void;
+  status: () => SseConnectionStatus;
+};
+
 export function buildSseUrl(
   host: string,
   endpoint: string,
@@ -23,21 +31,38 @@ export function createConnection<T>(
   callback: (data: T) => void,
   onError?: (error: Event) => void,
   withCredentials?: boolean
-): () => void {
-  const eventSource = new EventSource(url, { withCredentials: withCredentials ?? false });
+): SseConnection {
+  let eventSource: EventSource | null = null;
 
-  eventSource.onmessage = (event) => {
-    try {
-      callback(JSON.parse(event.data) as T);
-    } catch {
+  function wire(es: EventSource) {
+    es.onmessage = (event) => {
+      try {
+        callback(JSON.parse(event.data) as T);
+      } catch {
+        onError?.(event);
+      }
+    };
+
+    es.onerror = (event) => {
       onError?.(event);
-    }
-  };
+    };
+  }
 
-  eventSource.onerror = (event) => {
-    onError?.(event);
-    // EventSource auto-reconnects natively
+  return {
+    connect: () => {
+      eventSource?.close();
+      eventSource = new EventSource(url, { withCredentials: withCredentials ?? false });
+      wire(eventSource);
+    },
+    stop: () => {
+      eventSource?.close();
+      eventSource = null;
+    },
+    status: () => {
+      if (!eventSource) return "stopped";
+      if (eventSource.readyState === EventSource.OPEN) return "open";
+      if (eventSource.readyState === EventSource.CLOSED) return "error";
+      return "connecting";
+    },
   };
-
-  return () => eventSource.close();
 }

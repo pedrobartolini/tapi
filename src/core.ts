@@ -16,7 +16,7 @@ type RouteFunction<T extends Types.RequestConfig<any, any, any, any, any, any, a
 };
 
 type SseRouteFunction<T extends Types.SseConfig<any, any, any>> = Types.SseListenerFunction<T> & {
-  useHook: (params: Types.SseCallSignature<T> | null) => SseHook.SseHookResponse<T>;
+  useSse: (params: SseHook.SseHookParams<T> | null) => SseHook.SseHookResponse;
 };
 
 export type GenerateApiMethods<T extends Types.RouteDefinitions, TError = string> = {
@@ -78,7 +78,7 @@ function createNestedMethods<TError = string>(
         const url = Sse.buildSseUrl(host, sseConfig.endpoint, params);
         return Sse.createConnection(url, callback, undefined, withCredentials);
       };
-      (sseFunction as any).useHook = (params: any) =>
+      (sseFunction as any).useSse = (params: any) =>
         SseHook.useSseHook(host, sseConfig, params, withCredentials);
       target[routeName] = sseFunction;
     } else if (isRequestConfig(routeValue)) {

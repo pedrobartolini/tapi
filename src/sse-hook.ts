@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import isEqual from "react-fast-compare";
 
-import * as ResponseSchema from "./response";
 import * as Sse from "./sse";
-import * as Types from "./types";
+import type * as Types from "./types";
+import type * as ResponseSchema from "./response";
 
 function useDeepCompareMemo<T>(value: T): T {
   const ref = useRef<T>(value);
@@ -12,54 +12,61 @@ function useDeepCompareMemo<T>(value: T): T {
   return ref.current;
 }
 
-export type SseHookResponse<T extends Types.SseConfig<any, any, any>> =
-  | [ResponseSchema.InferResult<T["response"]>, null, false, () => void]
-  | [null, Error, false, () => void]
-  | [null, null, true, () => void];
+export type SseHookParams<T extends Types.SseConfig<any, any, any>> = Types.SseCallSignature<T> & {
+  onEvent: (data: ResponseSchema.InferResult<T["response"]>) => void;
+};
+
+export type SseHookResponse = {
+  status: Sse.SseConnectionStatus;
+  connect: () => void;
+  stop: () => void;
+};
 
 export function useSseHook<T extends Types.SseConfig<any, any, any>>(
   host: string,
   config: T,
-  callParams: Types.SseCallSignature<T> | null,
+  params: SseHookParams<T> | null,
   withCredentials?: boolean
-): SseHookResponse<T> {
-  const [data, setData] = useState<any>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const [loading, setLoading] = useState(true);
-  const closeRef = useRef<(() => void) | null>(null);
+): SseHookResponse {
+  const [status, setStatus] = useState<Sse.SseConnectionStatus>("stopped");
+  const connectionRef = useRef<Sse.SseConnection | null>(null);
+  const onEventRef = useRef(params?.onEvent);
+  onEventRef.current = params?.onEvent;
 
-  const memoizedParams = useDeepCompareMemo(callParams);
+  const { onEvent: _, ...connectionParams } = params ?? {} as any;
+  const memoizedParams = useDeepCompareMemo(params ? connectionParams : null);
 
   useEffect(() => {
     if (!memoizedParams) return;
 
-    setLoading(true);
-    setData(null);
-    setError(null);
-
     const url = Sse.buildSseUrl(host, config.endpoint, memoizedParams);
 
-    const close = Sse.createConnection(
+    const connection = Sse.createConnection(
       url,
       (parsed: any) => {
-        setData(parsed);
-        setError(null);
-        setLoading(false);
+        setStatus("open");
+        onEventRef.current?.(parsed);
       },
-      () => {
-        setError(new Error("SSE connection error"));
-        setLoading(false);
-      },
+      () => setStatus("error"),
       withCredentials
     );
 
-    closeRef.current = close;
-    return close;
-  }, [host, config.endpoint, memoizedParams]);
+    connectionRef.current = connection;
+    return () => {
+      connection.stop();
+      setStatus("stopped");
+    };
+  }, [host, config.endpoint, memoizedParams, withCredentials]);
 
-  const close = useCallback(() => {
-    closeRef.current?.();
+  const connect = useCallback(() => {
+    connectionRef.current?.connect();
+    setStatus("connecting");
   }, []);
 
-  return [data, error, loading, close] as SseHookResponse<T>;
+  const stop = useCallback(() => {
+    connectionRef.current?.stop();
+    setStatus("stopped");
+  }, []);
+
+  return { status, connect, stop };
 }

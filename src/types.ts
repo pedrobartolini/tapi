@@ -72,7 +72,13 @@ export type SseCallSignature<T extends SseConfig<any, any, any>> =
 export type SseListenerFunction<TConfig extends SseConfig<any, any, any>> = (
   params: SseCallSignature<TConfig>,
   callback: (data: ResponseSchema.InferResult<TConfig["response"]>) => void
-) => () => void;
+) => SseConnection;
+
+export type SseConnection = {
+  connect: () => void;
+  stop: () => void;
+  status: () => "connecting" | "open" | "error" | "stopped";
+};
 
 // Prefetch and postfetch callback types
 export type PrefetchCallback = (args: { url: string; method: HttpMethod; headers: Headers; body?: BodyInit | null }) => Promise<void> | void;
