@@ -20,7 +20,8 @@ export type SseHookResponse<T extends Types.SseConfig<any, any, any>> =
 export function useSseHook<T extends Types.SseConfig<any, any, any>>(
   host: string,
   config: T,
-  callParams: Types.SseCallSignature<T> | null
+  callParams: Types.SseCallSignature<T> | null,
+  withCredentials?: boolean
 ): SseHookResponse<T> {
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -48,7 +49,8 @@ export function useSseHook<T extends Types.SseConfig<any, any, any>>(
       () => {
         setError(new Error("SSE connection error"));
         setLoading(false);
-      }
+      },
+      withCredentials
     );
 
     closeRef.current = close;

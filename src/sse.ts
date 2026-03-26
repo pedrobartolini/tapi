@@ -21,9 +21,10 @@ export function buildSseUrl(
 export function createConnection<T>(
   url: string,
   callback: (data: T) => void,
-  onError?: (error: Event) => void
+  onError?: (error: Event) => void,
+  withCredentials?: boolean
 ): () => void {
-  const eventSource = new EventSource(url);
+  const eventSource = new EventSource(url, { withCredentials: withCredentials ?? false });
 
   eventSource.onmessage = (event) => {
     try {

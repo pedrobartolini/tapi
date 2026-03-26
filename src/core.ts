@@ -71,13 +71,15 @@ function createNestedMethods<TError = string>(
     if (isSseConfig(routeValue)) {
       // SSE uses EventSource which does not support custom headers,
       // so SSE routes are intentionally excluded from setHeaders updates.
+      // However, EventSource supports withCredentials for cookie-based auth.
       const sseConfig = routeValue;
+      const withCredentials = credentials === "include";
       const sseFunction = (params: any, callback: (data: any) => void) => {
         const url = Sse.buildSseUrl(host, sseConfig.endpoint, params);
-        return Sse.createConnection(url, callback);
+        return Sse.createConnection(url, callback, undefined, withCredentials);
       };
       (sseFunction as any).useHook = (params: any) =>
-        SseHook.useSseHook(host, sseConfig, params);
+        SseHook.useSseHook(host, sseConfig, params, withCredentials);
       target[routeName] = sseFunction;
     } else if (isRequestConfig(routeValue)) {
       const requester = RequestCreator.create(host, routeValue, prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language, credentials);
