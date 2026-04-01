@@ -55,6 +55,10 @@ export function useHook<T extends Types.RequestConfig<any, any, any, any, any, a
   useEffect(() => {
     if (!memoizedParams || memoizedParams.lazy) return;
 
+    setLoading(true);
+    setData(null);
+    setError(null);
+
     const controller = new AbortController();
     fetchData(controller.signal);
 
