@@ -38,11 +38,12 @@ export type RouteDefinitions = {
 };
 
 // Parameter inference types - check if type is defined (not undefined)
-type InferPathParam<TPath> = TPath extends undefined ? { path?: never } : { path: TPath };
-type InferBodyParam<TBody> = TBody extends undefined ? { body?: never } : { body: TBody };
-type InferFormDataParam<TFormData> = TFormData extends undefined ? { formData?: never } : { formData: TFormData };
-type InferQueryParam<TQuery> = TQuery extends undefined ? { query?: never } : { query: TQuery };
-type InferHeaderParam<THeaders> = THeaders extends undefined ? { headers?: never } : { headers: THeaders };
+// Tuple wrapping prevents conditional type distribution over unions
+type InferPathParam<TPath> = [TPath] extends [undefined] ? { path?: never } : { path: TPath };
+type InferBodyParam<TBody> = [TBody] extends [undefined] ? { body?: never } : { body: TBody };
+type InferFormDataParam<TFormData> = [TFormData] extends [undefined] ? { formData?: never } : { formData: TFormData };
+type InferQueryParam<TQuery> = [TQuery] extends [undefined] ? { query?: never } : { query: TQuery };
+type InferHeaderParam<THeaders> = [THeaders] extends [undefined] ? { headers?: never } : { headers: THeaders };
 
 // Extract types from RequestConfig
 export type ExtractPath<T> = T extends RequestConfig<any, infer P, any, any, any, any, any> ? P : undefined;
