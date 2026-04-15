@@ -44,11 +44,11 @@ export function useSseHook<T extends Types.SseConfig<any, any, any>>(
     const connection = Sse.createConnection(
       url,
       (parsed: any) => {
-        setStatus("open");
         onEventRef.current?.(parsed);
       },
       () => setStatus("error"),
-      withCredentials
+      withCredentials,
+      () => setStatus("open")
     );
 
     connectionRef.current = connection;

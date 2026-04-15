@@ -30,11 +30,16 @@ export function createConnection<T>(
   url: string,
   callback: (data: T) => void,
   onError?: (error: Event) => void,
-  withCredentials?: boolean
+  withCredentials?: boolean,
+  onOpen?: () => void
 ): SseConnection {
   let eventSource: EventSource | null = null;
 
   function wire(es: EventSource) {
+    es.onopen = () => {
+      onOpen?.();
+    };
+
     es.onmessage = (event) => {
       try {
         callback(JSON.parse(event.data) as T);
