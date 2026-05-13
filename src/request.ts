@@ -41,11 +41,13 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
         if (params.formData) {
           body = new FormData();
           for (const [key, value] of Object.entries(params.formData as Record<string, any>)) {
+            if (value === null || value === undefined) continue;
             if (value instanceof Array) {
-              if (value.length !== 0 && value[0] instanceof File) {
-                for (const item of value) (body as FormData).append(key, item);
-                continue;
+              for (const item of value) {
+                if (item === null || item === undefined) continue;
+                (body as FormData).append(key, item);
               }
+              continue;
             }
             (body as FormData).append(key, value as string | Blob);
           }
