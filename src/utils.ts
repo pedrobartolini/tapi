@@ -2,6 +2,21 @@ import * as Errors from "./errors";
 import { Language, t } from "./translations";
 import * as Types from "./types";
 
+function appendQueryParam(out: URLSearchParams, key: string, value: unknown): void {
+  if (value === null || value === undefined) return;
+  if (Array.isArray(value)) {
+    value.forEach((item, i) => appendQueryParam(out, `${key}[${i}]`, item));
+    return;
+  }
+  if (typeof value === "object") {
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      appendQueryParam(out, `${key}[${k}]`, v);
+    }
+    return;
+  }
+  out.append(key, String(value));
+}
+
 export function buildUrl<T extends Types.RequestConfig<any, any, any, any, any, any, any>>(host: string, config: T, params: Types.RequesterParams<T>): string {
   let url = config.endpoint;
 
@@ -12,8 +27,15 @@ export function buildUrl<T extends Types.RequestConfig<any, any, any, any, any, 
     }
   }
 
-  // Add query parameters
-  const queryString = params.query ? `?${new URLSearchParams(params.query as Record<string, string>).toString()}` : "";
+  let queryString = "";
+  if (params.query) {
+    const sp = new URLSearchParams();
+    for (const [key, value] of Object.entries(params.query as Record<string, unknown>)) {
+      appendQueryParam(sp, key, value);
+    }
+    const s = sp.toString();
+    if (s) queryString = `?${s}`;
+  }
 
   return `${host}${url}${queryString}`;
 }
