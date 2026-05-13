@@ -53,7 +53,14 @@ export function useHook<T extends Types.RequestConfig<any, any, any, any, any, a
   );
 
   useEffect(() => {
-    if (!memoizedParams || memoizedParams.lazy) return;
+    if (!memoizedParams) {
+      setData(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    if (memoizedParams.lazy) return;
 
     setLoading(true);
     setData(null);
@@ -73,6 +80,8 @@ export function useHook<T extends Types.RequestConfig<any, any, any, any, any, a
   }, []);
 
   async function refresh(resetState?: boolean): Promise<boolean> {
+    if (!memoizedParams) return true;
+
     if (resetState) {
       setLoading(true);
       setData(null);
