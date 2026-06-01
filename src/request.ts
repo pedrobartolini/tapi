@@ -45,11 +45,11 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
             if (value instanceof Array) {
               for (const item of value) {
                 if (item === null || item === undefined) continue;
-                (body as FormData).append(key, item);
+                Utils.appendFormField(body as FormData, key, item);
               }
               continue;
             }
-            (body as FormData).append(key, value as string | Blob);
+            Utils.appendFormField(body as FormData, key, value);
           }
         } else if (params.body) {
           body = JSON.stringify(params.body);

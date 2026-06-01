@@ -17,6 +17,29 @@ function appendQueryParam(out: URLSearchParams, key: string, value: unknown): vo
   out.append(key, String(value));
 }
 
+/**
+ * Append a single value to a FormData body. Blobs/Files are sent as binary
+ * parts and strings/numbers/booleans as-is, but nested objects are serialized
+ * to JSON so a typed struct field (e.g. a tagged union) can travel as one
+ * multipart part and be parsed server-side. Without this, `FormData.append`
+ * coerces an object to the literal string "[object Object]".
+ */
+export function appendFormField(form: FormData, key: string, value: unknown): void {
+  if (value instanceof Blob) {
+    form.append(key, value);
+    return;
+  }
+  if (typeof value === "string") {
+    form.append(key, value);
+    return;
+  }
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    form.append(key, String(value));
+    return;
+  }
+  form.append(key, JSON.stringify(value));
+}
+
 export function buildUrl<T extends Types.RequestConfig<any, any, any, any, any, any, any>>(host: string, config: T, params: Types.RequesterParams<T>): string {
   let url = config.endpoint;
 
@@ -68,11 +91,11 @@ export async function executeRequest<T extends Types.RequestConfig<any, any, any
       if (value instanceof Array) {
         for (const item of value) {
           if (item === null || item === undefined) continue;
-          (body as FormData).append(key, item);
+          appendFormField(body as FormData, key, item);
         }
         continue;
       }
-      (body as FormData).append(key, value as string | Blob);
+      appendFormField(body as FormData, key, value);
     }
   } else if (params.body) {
     // Handle JSON body
