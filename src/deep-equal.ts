@@ -24,6 +24,24 @@ export default function deepEqual(a: unknown, b: unknown): boolean {
     if (a instanceof Date) return a.getTime() === (b as Date).getTime();
     if (a instanceof RegExp) return a.toString() === (b as RegExp).toString();
 
+    if (a instanceof Map) {
+      const mapB = b as Map<unknown, unknown>;
+      if (a.size !== mapB.size) return false;
+      for (const [key, value] of a) {
+        if (!mapB.has(key) || !deepEqual(value, mapB.get(key))) return false;
+      }
+      return true;
+    }
+
+    if (a instanceof Set) {
+      const setB = b as Set<unknown>;
+      if (a.size !== setB.size) return false;
+      for (const value of a) {
+        if (!setB.has(value)) return false;
+      }
+      return true;
+    }
+
     const keys = Object.keys(a as Record<string, unknown>);
     if (keys.length !== Object.keys(b as Record<string, unknown>).length) return false;
 
