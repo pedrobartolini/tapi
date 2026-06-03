@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import isEqual from "react-fast-compare";
+import isEqual from "./deep-equal";
 
 import * as ResponseSchema from "./response";
 import * as Types from "./types";

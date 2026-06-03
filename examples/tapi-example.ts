@@ -1,4 +1,6 @@
-import Tapi from "tapi-rs"
+// React-enabled entry: built routes expose `.useHook` / `.useSse`.
+// For non-React usage, import from "tapi-rs" instead (no React dependency).
+import Tapi from "tapi-rs/react"
 
 // ─── Types ───────────────────────────────────────────────────────────
 

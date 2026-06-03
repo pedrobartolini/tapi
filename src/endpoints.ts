@@ -11,14 +11,7 @@ type EndpointOptions = {
 /**
  * Type parameters object - only specify what you need
  */
-type EndpointTypes<
-  TPath = undefined,
-  TBody = undefined,
-  TFormData = undefined,
-  TQuery = undefined,
-  THeaders = undefined,
-  TResponse = unknown
-> = {
+type EndpointTypes<TPath = undefined, TBody = undefined, TFormData = undefined, TQuery = undefined, THeaders = undefined, TResponse = unknown> = {
   path?: TPath;
   body?: TBody;
   formData?: TFormData;
@@ -55,17 +48,7 @@ type ExtractResponse<T> = T extends { response: infer R } ? R : unknown;
  */
 function createEndpointFactory<TMethod extends HttpMethod>(method: TMethod) {
   return <T extends EndpointTypes<any, any, any, any, any, any> = {}>() =>
-    (
-      config: EndpointOptions
-    ): RequestConfig<
-      TMethod,
-      ExtractPath<T>,
-      ExtractBody<T>,
-      ExtractFormData<T>,
-      ExtractQuery<T>,
-      ExtractHeaders<T>,
-      ExtractResponse<T>
-    > => ({
+    (config: EndpointOptions): RequestConfig<TMethod, ExtractPath<T>, ExtractBody<T>, ExtractFormData<T>, ExtractQuery<T>, ExtractHeaders<T>, ExtractResponse<T>> => ({
       method,
       endpoint: config.endpoint,
       response: {}, // Phantom type marker - no runtime value needed
@@ -73,11 +56,7 @@ function createEndpointFactory<TMethod extends HttpMethod>(method: TMethod) {
     });
 }
 
-type SseEndpointTypes<
-  TPath = undefined,
-  TQuery = undefined,
-  TResponse = unknown
-> = {
+type SseEndpointTypes<TPath = undefined, TQuery = undefined, TResponse = unknown> = {
   path?: TPath;
   query?: TQuery;
   response?: TResponse;
@@ -89,16 +68,10 @@ type ExtractSseResponse<T> = T extends { response: infer R } ? R : unknown;
 
 function createSseEndpointFactory() {
   return <T extends SseEndpointTypes<any, any, any> = {}>() =>
-    (
-      config: { endpoint: string }
-    ): SseConfig<
-      ExtractSsePath<T>,
-      ExtractSseQuery<T>,
-      ExtractSseResponse<T>
-    > => ({
+    (config: { endpoint: string }): SseConfig<ExtractSsePath<T>, ExtractSseQuery<T>, ExtractSseResponse<T>> => ({
       type: "sse" as const,
       endpoint: config.endpoint,
-      response: {},
+      response: {}
     });
 }
 

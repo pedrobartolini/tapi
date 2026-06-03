@@ -1,6 +1,6 @@
 {
   "name": "tapi-rs",
-  "version": "5.8.0",
+  "version": "6.0.0",
   "description": "A modern, type-safe REST API client builder for TypeScript/JavaScript applications with React hooks integration and intelligent error handling.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,6 +10,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "require": "./dist/react.js"
     }
   },
   "files": [
@@ -53,8 +58,10 @@
   "peerDependencies": {
     "react": ">=16.8.0"
   },
-  "dependencies": {
-    "react-fast-compare": "^3.2.2"
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "prettier": "^3.6.2",

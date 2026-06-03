@@ -23,11 +23,7 @@ export type RequestConfig<
   responseType?: ResponseType;
 };
 
-export type SseConfig<
-  TPath = undefined,
-  TQuery = undefined,
-  TResponse = unknown
-> = {
+export type SseConfig<TPath = undefined, TQuery = undefined, TResponse = unknown> = {
   type: "sse";
   endpoint: string;
   response: ResponseSchema.ResponseConfig<TResponse>;
@@ -67,8 +63,7 @@ export type CallSignature<T extends RequestConfig<any, any, any, any, any, any, 
 type ExtractSsePath<T> = T extends SseConfig<infer P, any, any> ? P : undefined;
 type ExtractSseQuery<T> = T extends SseConfig<any, infer Q, any> ? Q : undefined;
 
-export type SseCallSignature<T extends SseConfig<any, any, any>> =
-  InferPathParam<ExtractSsePath<T>> & InferQueryParam<ExtractSseQuery<T>>;
+export type SseCallSignature<T extends SseConfig<any, any, any>> = InferPathParam<ExtractSsePath<T>> & InferQueryParam<ExtractSseQuery<T>>;
 
 export type SseListenerFunction<TConfig extends SseConfig<any, any, any>> = (
   params: SseCallSignature<TConfig>,

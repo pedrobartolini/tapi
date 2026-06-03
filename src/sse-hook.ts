@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import isEqual from "react-fast-compare";
+import isEqual from "./deep-equal";
 
 import * as Sse from "./sse";
 import type * as Types from "./types";
@@ -33,7 +33,7 @@ export function useSseHook<T extends Types.SseConfig<any, any, any>>(
   const onEventRef = useRef(params?.onEvent);
   onEventRef.current = params?.onEvent;
 
-  const { onEvent: _, ...connectionParams } = params ?? {} as any;
+  const { onEvent: _, ...connectionParams } = params ?? ({} as any);
   const memoizedParams = useDeepCompareMemo(params ? connectionParams : null);
 
   useEffect(() => {

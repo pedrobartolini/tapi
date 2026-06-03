@@ -69,7 +69,22 @@ Available type params: `path`, `body`, `formData`, `query`, `headers`, `response
 
 ## React hooks
 
-Every route function has a `.useHook()` method:
+React is an **optional** integration. The default `tapi-rs` entry is React-free and has zero runtime dependencies — import it anywhere (Node, workers, non-React apps) without pulling in React.
+
+To get the `.useHook()` / `.useSse()` methods on your routes, build the client from the `tapi-rs/react` entry instead:
+
+```ts
+import Tapi from "tapi-rs/react" // instead of "tapi-rs"
+
+const api = Tapi.builder()
+  .withHost("https://api.example.com")
+  .withRoutes(routes)
+  .build()
+```
+
+Everything else is identical — the only difference is that routes built from `tapi-rs/react` additionally expose hooks. (`react` is an optional peer dependency, so it's only required when you use this entry.)
+
+Every route function then has a `.useHook()` method:
 
 ```tsx
 function UserProfile({ userId }: { userId: string }) {

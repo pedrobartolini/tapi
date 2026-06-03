@@ -6,11 +6,7 @@ export type SseConnection = {
   status: () => SseConnectionStatus;
 };
 
-export function buildSseUrl(
-  host: string,
-  endpoint: string,
-  params: { path?: Record<string, string>; query?: Record<string, string> }
-): string {
+export function buildSseUrl(host: string, endpoint: string, params: { path?: Record<string, string>; query?: Record<string, string> }): string {
   let url = endpoint;
 
   if (params.path) {
@@ -19,9 +15,7 @@ export function buildSseUrl(
     }
   }
 
-  const queryString = params.query
-    ? `?${new URLSearchParams(params.query).toString()}`
-    : "";
+  const queryString = params.query ? `?${new URLSearchParams(params.query).toString()}` : "";
 
   return `${host}${url}${queryString}`;
 }
@@ -68,6 +62,6 @@ export function createConnection<T>(
       if (eventSource.readyState === EventSource.OPEN) return "open";
       if (eventSource.readyState === EventSource.CLOSED) return "error";
       return "connecting";
-    },
+    }
   };
 }

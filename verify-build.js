@@ -20,6 +20,8 @@ if (!fs.existsSync(distPath)) {
 const requiredFiles = [
   "index.js",
   "index.d.ts",
+  "react.js",
+  "react.d.ts",
   "core.js",
   "core.d.ts",
   "endpoints.js",
