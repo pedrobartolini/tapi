@@ -5,7 +5,6 @@ import type { HttpMethod, RequestConfig, SseConfig } from "./types";
  */
 type EndpointOptions = {
   endpoint: string;
-  responseType?: "json" | "blob";
 };
 
 /**
@@ -51,8 +50,7 @@ function createEndpointFactory<TMethod extends HttpMethod>(method: TMethod) {
     (config: EndpointOptions): RequestConfig<TMethod, ExtractPath<T>, ExtractBody<T>, ExtractFormData<T>, ExtractQuery<T>, ExtractHeaders<T>, ExtractResponse<T>> => ({
       method,
       endpoint: config.endpoint,
-      response: {}, // Phantom type marker - no runtime value needed
-      ...(config.responseType && { responseType: config.responseType })
+      response: {} // Phantom type marker - no runtime value needed
     });
 }
 

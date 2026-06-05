@@ -6,8 +6,6 @@ export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
  * Request configuration with pure TypeScript types
  * Types are passed via generics, not runtime schemas
  */
-export type ResponseType = "json" | "blob" | "text";
-
 export type RequestConfig<
   TMethod extends HttpMethod = HttpMethod,
   TPath = undefined,
@@ -20,7 +18,6 @@ export type RequestConfig<
   method: TMethod;
   endpoint: string;
   response: ResponseSchema.ResponseConfig<TResponse>;
-  responseType?: ResponseType;
 };
 
 export type SseConfig<TPath = undefined, TQuery = undefined, TResponse = unknown> = {
@@ -39,9 +36,7 @@ type InferPathParam<TPath> = [TPath] extends [undefined] ? { path?: never } : { 
 type InferBodyParam<TBody> = [TBody] extends [undefined] ? { body?: never } : { body: TBody };
 type InferFormDataParam<TFormData> = [TFormData] extends [undefined] ? { formData?: never } : { formData: TFormData };
 type InferQueryParam<TQuery> = [TQuery] extends [undefined] ? { query?: never } : { query: TQuery };
-type InferHeaderParam<THeaders> = [THeaders] extends [undefined]
-  ? { headers?: Record<string, string> }
-  : { headers: THeaders & Record<string, string> };
+type InferHeaderParam<THeaders> = [THeaders] extends [undefined] ? { headers?: Record<string, string> } : { headers: THeaders & Record<string, string> };
 
 // Extract types from RequestConfig
 export type ExtractPath<T> = T extends RequestConfig<any, infer P, any, any, any, any, any> ? P : undefined;
@@ -87,7 +82,8 @@ export type Success<T> = { ok: true; status: "success"; data: T };
 
 export type NetworkError = { ok: false; code: number; status: "network_error"; message: string; error: Error };
 export type CustomError<T = string> = { ok: false; code: number; status: "api_error"; message: string; data: T };
-export type Errors<T = string> = NetworkError | CustomError<T>;
+export type ParseError = { ok: false; code: number; status: "parse_error"; message: string; error: Error };
+export type Errors<T = string> = NetworkError | CustomError<T> | ParseError;
 
 export type ApiResponse<TData, TError = string> = (Success<TData> | Errors<TError>) & { endpoint: string; method: HttpMethod };
 

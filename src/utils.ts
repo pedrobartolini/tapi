@@ -110,6 +110,21 @@ export async function executeRequest<T extends Types.RequestConfig<any, any, any
   }
 }
 
+/**
+ * Parse a successful response body based on its Content-Type header.
+ * - JSON content types (`application/json`, `application/*+json`) -> parsed object
+ * - `text/*` -> string
+ * - anything else with a Content-Type -> Blob (binary)
+ * - missing/empty Content-Type -> JSON (preserves the common-case default)
+ */
+export async function parseResponseBody(response: Response): Promise<any> {
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+  if (!contentType) return response.json();
+  if (contentType.includes("application/json") || contentType.includes("+json")) return response.json();
+  if (contentType.startsWith("text/")) return response.text();
+  return response.blob();
+}
+
 export async function handleErrorResponse<TError = string>(
   response: Response,
   errorHandler?: (response: Response) => Promise<TError>,

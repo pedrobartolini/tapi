@@ -4,6 +4,7 @@ export interface Translations {
   errors: {
     requestFailed: string;
     invalidErrorFormat: string;
+    parseFailed: string;
   };
   builder: {
     hostRequired: string;
@@ -16,7 +17,8 @@ const translations: Record<Language, Translations> = {
   en: {
     errors: {
       requestFailed: "Unable to complete the request",
-      invalidErrorFormat: "Invalid error message format"
+      invalidErrorFormat: "Invalid error message format",
+      parseFailed: "Unable to parse the response body"
     },
     builder: {
       hostRequired: "Host is required - use .withHost() first",
@@ -27,7 +29,8 @@ const translations: Record<Language, Translations> = {
   br: {
     errors: {
       requestFailed: "Não foi possível completar a requisição",
-      invalidErrorFormat: "Formato de mensagem de erro inválido"
+      invalidErrorFormat: "Formato de mensagem de erro inválido",
+      parseFailed: "Não foi possível interpretar o corpo da resposta"
     },
     builder: {
       hostRequired: "Host é obrigatório - use .withHost() primeiro",

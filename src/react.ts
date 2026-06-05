@@ -1,4 +1,4 @@
-export type { CustomError, Errors, HttpMethod, NetworkError, ApiResponse, Success } from "./types";
+export type { CustomError, Errors, HttpMethod, NetworkError, ParseError, ApiResponse, Success } from "./types";
 export type { SseConfig, SseCallSignature, SseListenerFunction, SseConnection } from "./types";
 export type { SseHookParams, SseHookResponse } from "./sse-hook";
 export type { RefreshFunction, HookResponse } from "./hook";

@@ -230,16 +230,24 @@ await api.uploadAvatar({
 
 File arrays are supported — each file is appended individually to the FormData.
 
-## Blob responses
+## Response parsing
 
-Set `responseType: "blob"` for binary data:
+The response body is parsed automatically from the `Content-Type` header:
+
+- `application/json` (and `application/*+json`) → parsed JSON
+- `text/*` → `string`
+- anything else → `Blob` (binary)
+- missing `Content-Type` → JSON
+
+Just declare the matching `response` type — there's no `responseType` flag to set:
 
 ```ts
 const routes = {
+  // server returns application/pdf -> parsed as a Blob
   downloadReport: Tapi.get<{
     path: { id: string }
     response: Blob
-  }>()({ endpoint: "/reports/:id/download", responseType: "blob" }),
+  }>()({ endpoint: "/reports/:id/download" }),
 }
 ```
 

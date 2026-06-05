@@ -22,6 +22,13 @@ export function createCustomError<T = string>(message: string, data: T, code: nu
 }
 
 /**
+ * Creates a parse error response (the request succeeded but the body could not be parsed)
+ */
+export function createParseError(message: string, error: Error, code: number): Types.ParseError {
+  return { ok: false, code, status: "parse_error", message, error };
+}
+
+/**
  * Type guard to check if response is successful
  */
 export function isSuccess<T>(response: Types.ApiResponse<T, any>): response is Types.Success<T> & { endpoint: string; method: Types.HttpMethod } {

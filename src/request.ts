@@ -76,8 +76,16 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
           return nError;
         }
 
-        // Parse response data (no validation, trust the types)
-        const data = config.responseType === "blob" ? await response.blob() : config.responseType === "text" ? await response.text() : await response.json();
+        // Parse response data based on Content-Type (no validation, trust the types)
+        let data: any;
+        try {
+          data = await Utils.parseResponseBody(response);
+        } catch (error) {
+          const parseError = Errors.createParseError(translations.errors.parseFailed, error instanceof Error ? error : new Error(String(error)), response.status);
+          const nError = { ...parseError, endpoint: url, method: config.method };
+          if (!params.signal?.aborted) dispatchPostFetchCallback(postfetchCallback, nError);
+          return nError;
+        }
 
         const successResult = Errors.createSuccess(data);
         const nResult = { ...successResult, endpoint: config.endpoint, method: config.method };
