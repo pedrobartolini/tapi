@@ -39,7 +39,9 @@ type InferPathParam<TPath> = [TPath] extends [undefined] ? { path?: never } : { 
 type InferBodyParam<TBody> = [TBody] extends [undefined] ? { body?: never } : { body: TBody };
 type InferFormDataParam<TFormData> = [TFormData] extends [undefined] ? { formData?: never } : { formData: TFormData };
 type InferQueryParam<TQuery> = [TQuery] extends [undefined] ? { query?: never } : { query: TQuery };
-type InferHeaderParam<THeaders> = [THeaders] extends [undefined] ? { headers?: never } : { headers: THeaders };
+type InferHeaderParam<THeaders> = [THeaders] extends [undefined]
+  ? { headers?: Record<string, string> }
+  : { headers: THeaders & Record<string, string> };
 
 // Extract types from RequestConfig
 export type ExtractPath<T> = T extends RequestConfig<any, infer P, any, any, any, any, any> ? P : undefined;

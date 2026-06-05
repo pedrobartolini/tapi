@@ -94,6 +94,16 @@ const routes = {
       response: Blob
     }>()({ endpoint: "/reports/:id/download", responseType: "blob" }),
   },
+
+  secrets: {
+    // Declaring `headers` makes those keys REQUIRED at the call site.
+    // Extra per-call headers are still allowed alongside the required ones.
+    get: Tapi.get<{
+      headers: { "x-api-key": string }
+      path: { id: string }
+      response: { value: string }
+    }>()({ endpoint: "/secrets/:id" }),
+  },
 }
 
 // ─── Client ──────────────────────────────────────────────────────────
@@ -157,6 +167,16 @@ async function examples() {
     const url = URL.createObjectURL(report.data)
     console.log("Download URL:", url)
   }
+
+  // Per-call headers — any endpoint accepts optional ad-hoc headers,
+  // merged on top of the default headers for this request only.
+  await api.users.list({ headers: { "x-trace-id": crypto.randomUUID() } })
+
+  // Required header — declared on the endpoint, enforced at the call site.
+  await api.secrets.get({
+    path: { id: "db-password" },
+    headers: { "x-api-key": process.env.API_KEY!, "x-trace-id": "abc" },
+  })
 
   // Update headers at runtime
   api.setHeaders({ Authorization: "Bearer refreshed-token" })
