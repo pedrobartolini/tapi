@@ -1,4 +1,5 @@
 import * as ResponseSchema from "./response";
+import type * as Sse from "./sse";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
@@ -20,14 +21,14 @@ export type RequestConfig<
   response: ResponseSchema.ResponseConfig<TResponse>;
 };
 
-export type SseConfig<TPath = undefined, TQuery = undefined, TResponse = unknown> = {
+export type SseConfig<TPath = undefined, TQuery = undefined, THeaders = undefined, TResponse = unknown> = {
   type: "sse";
   endpoint: string;
   response: ResponseSchema.ResponseConfig<TResponse>;
 };
 
 export type RouteDefinitions = {
-  [key: string]: RequestConfig<any, any, any, any, any, any, any> | SseConfig<any, any, any> | RouteDefinitions;
+  [key: string]: RequestConfig<any, any, any, any, any, any, any> | SseConfig<any, any, any, any> | RouteDefinitions;
 };
 
 // Parameter inference types - check if type is defined (not undefined)
@@ -57,14 +58,17 @@ export type CallSignature<T extends RequestConfig<any, any, any, any, any, any, 
   InferQueryParam<ExtractQuery<T>> &
   InferHeaderParam<ExtractHeaders<T>> & { signal?: AbortSignal };
 
-type ExtractSsePath<T> = T extends SseConfig<infer P, any, any> ? P : undefined;
-type ExtractSseQuery<T> = T extends SseConfig<any, infer Q, any> ? Q : undefined;
+type ExtractSsePath<T> = T extends SseConfig<infer P, any, any, any> ? P : undefined;
+type ExtractSseQuery<T> = T extends SseConfig<any, infer Q, any, any> ? Q : undefined;
+type ExtractSseHeaders<T> = T extends SseConfig<any, any, infer H, any> ? H : undefined;
 
-export type SseCallSignature<T extends SseConfig<any, any, any>> = InferPathParam<ExtractSsePath<T>> & InferQueryParam<ExtractSseQuery<T>>;
+export type SseCallSignature<T extends SseConfig<any, any, any, any>> = InferPathParam<ExtractSsePath<T>> &
+  InferQueryParam<ExtractSseQuery<T>> &
+  InferHeaderParam<ExtractSseHeaders<T>>;
 
-export type SseListenerFunction<TConfig extends SseConfig<any, any, any>> = (
+export type SseListenerFunction<TConfig extends SseConfig<any, any, any, any>> = (
   params: SseCallSignature<TConfig>,
-  callback: (data: ResponseSchema.InferResult<TConfig["response"]>) => void
+  handlers: Sse.SseHandlers<ResponseSchema.InferResult<TConfig["response"]>>
 ) => SseConnection;
 
 export type SseConnection = {

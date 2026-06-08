@@ -54,19 +54,21 @@ function createEndpointFactory<TMethod extends HttpMethod>(method: TMethod) {
     });
 }
 
-type SseEndpointTypes<TPath = undefined, TQuery = undefined, TResponse = unknown> = {
+type SseEndpointTypes<TPath = undefined, TQuery = undefined, THeaders = undefined, TResponse = unknown> = {
   path?: TPath;
   query?: TQuery;
+  headers?: THeaders;
   response?: TResponse;
 };
 
 type ExtractSsePath<T> = T extends { path: infer P } ? P : undefined;
 type ExtractSseQuery<T> = T extends { query: infer Q } ? Q : undefined;
+type ExtractSseHeaders<T> = T extends { headers: infer H } ? H : undefined;
 type ExtractSseResponse<T> = T extends { response: infer R } ? R : unknown;
 
 function createSseEndpointFactory() {
-  return <T extends SseEndpointTypes<any, any, any> = {}>() =>
-    (config: { endpoint: string }): SseConfig<ExtractSsePath<T>, ExtractSseQuery<T>, ExtractSseResponse<T>> => ({
+  return <T extends SseEndpointTypes<any, any, any, any> = {}>() =>
+    (config: { endpoint: string }): SseConfig<ExtractSsePath<T>, ExtractSseQuery<T>, ExtractSseHeaders<T>, ExtractSseResponse<T>> => ({
       type: "sse" as const,
       endpoint: config.endpoint,
       response: {}

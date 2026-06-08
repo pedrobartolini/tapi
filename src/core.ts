@@ -15,7 +15,12 @@ import * as Types from "./types";
  */
 export type ReactAdapter = {
   useHook: (requester: Types.RequesterFunction<any, any>, params: any) => any;
-  useSseHook: (host: string, config: Types.SseConfig<any, any, any>, params: any, withCredentials: boolean) => any;
+  useSseHook: (
+    host: string,
+    config: Types.SseConfig<any, any, any, any>,
+    params: any,
+    options: { headers?: Record<string, string>; credentials?: RequestCredentials }
+  ) => any;
 };
 
 type PathBuilderSignature<T extends Types.RequestConfig<any, any, any, any, any, any, any>> =
@@ -25,7 +30,7 @@ type ReactRouteMembers<T extends Types.RequestConfig<any, any, any, any, any, an
   ? { useHook: (params: (Types.CallSignature<T> & { lazy?: boolean }) | null) => Hook.HookResponse<T, TError> }
   : {};
 
-type ReactSseMembers<T extends Types.SseConfig<any, any, any>, TReact extends boolean> = TReact extends true
+type ReactSseMembers<T extends Types.SseConfig<any, any, any, any>, TReact extends boolean> = TReact extends true
   ? { useSse: (params: SseHook.SseHookParams<T> | null) => SseHook.SseHookResponse }
   : {};
 
@@ -36,10 +41,10 @@ type RouteFunction<T extends Types.RequestConfig<any, any, any, any, any, any, a
   path: PathBuilderSignature<T>;
 } & ReactRouteMembers<T, TError, TReact>;
 
-type SseRouteFunction<T extends Types.SseConfig<any, any, any>, TReact extends boolean = false> = Types.SseListenerFunction<T> & ReactSseMembers<T, TReact>;
+type SseRouteFunction<T extends Types.SseConfig<any, any, any, any>, TReact extends boolean = false> = Types.SseListenerFunction<T> & ReactSseMembers<T, TReact>;
 
 export type GenerateApiMethods<T extends Types.RouteDefinitions, TError = string, TReact extends boolean = false> = {
-  [K in keyof T]: T[K] extends Types.SseConfig<any, any, any>
+  [K in keyof T]: T[K] extends Types.SseConfig<any, any, any, any>
     ? SseRouteFunction<T[K], TReact>
     : T[K] extends Types.RequestConfig<any, any, any, any, any, any, any>
       ? RouteFunction<T[K], TError, TReact>
@@ -62,7 +67,7 @@ function isRequestConfig(value: unknown): value is Types.RequestConfig<any, any,
   return typeof v.method === "string" && typeof v.endpoint === "string" && typeof v.response === "object" && v.response !== null;
 }
 
-function isSseConfig(value: unknown): value is Types.SseConfig<any, any, any> {
+function isSseConfig(value: unknown): value is Types.SseConfig<any, any, any, any> {
   if (typeof value !== "object" || value === null) return false;
   const v = value as any;
   return v.type === "sse" && typeof v.endpoint === "string";
@@ -89,17 +94,17 @@ function createNestedMethods<TError = string>(
 
   for (const [routeName, routeValue] of Object.entries(routes)) {
     if (isSseConfig(routeValue)) {
-      // SSE uses EventSource which does not support custom headers,
-      // so SSE routes are intentionally excluded from setHeaders updates.
-      // However, EventSource supports withCredentials for cookie-based auth.
+      // SSE streams over `fetch`, so it honors both default headers (kept in
+      // sync via setHeaders by reading `currentHeaders` lazily) and per-call
+      // headers, plus `credentials` for cookie-based auth — just like requests.
       const sseConfig = routeValue;
-      const withCredentials = credentials === "include";
-      const sseFunction = (params: any, callback: (data: any) => void) => {
+      const sseFunction = (params: any, handlers: Sse.SseHandlers<any>) => {
         const url = Sse.buildSseUrl(host, sseConfig.endpoint, params);
-        return Sse.createConnection(url, callback, undefined, withCredentials);
+        const headers = { ...(currentHeaders || {}), ...(params.headers || {}) };
+        return Sse.createConnection(url, handlers, { headers, credentials });
       };
       if (reactAdapter) {
-        (sseFunction as any).useSse = (params: any) => reactAdapter.useSseHook(host, sseConfig, params, withCredentials);
+        (sseFunction as any).useSse = (params: any) => reactAdapter.useSseHook(host, sseConfig, params, { headers: currentHeaders, credentials });
       }
       target[routeName] = sseFunction;
     } else if (isRequestConfig(routeValue)) {

@@ -150,6 +150,67 @@ function removeUser(id: string) {
 }
 ```
 
+## Server-Sent Events (SSE)
+
+Define a streaming route with `Tapi.sse`. It supports `path`, `query`, `headers`, and `response` type params — the `response` type describes the JSON payload of each event:
+
+```ts
+const routes = {
+  chat: Tapi.sse<{
+    path: { roomId: string }
+    query: { since?: number }
+    headers: { Authorization: string }
+    response: { id: string; message: string }
+  }>()({ endpoint: "/chat/:roomId/stream" }),
+}
+```
+
+Call the route with params and a set of **lifecycle handlers** — all of them are optional:
+
+```ts
+const connection = api.chat(
+  { path: { roomId: "42" }, headers: { Authorization: `Bearer ${token}` } },
+  {
+    onData: (event) => console.log(event.message), // typed as { id, message }
+    onOpen: () => console.log("connected"),
+    onError: (error) => console.error(error),
+    onClose: () => console.log("stream ended"),
+  }
+)
+
+connection.connect() // open the stream
+connection.status() // "connecting" | "open" | "error" | "stopped"
+connection.stop() // close it
+```
+
+`onData` fires per event with the JSON-parsed payload. `onError` fires on a network/HTTP failure or an unparseable payload. `onClose` fires when the server ends the stream — a manual `stop()` does not trigger it.
+
+Unlike the native `EventSource`, tapi streams SSE over `fetch`, so custom `headers` (and `.withCredentials(...)`) work just like on any other route, including updates via `setHeaders`.
+
+### React
+
+Routes built from `tapi-rs/react` expose `.useSse()`, which manages the connection across the component lifecycle:
+
+```tsx
+function ChatRoom({ roomId }: { roomId: string }) {
+  const { status, connect, stop } = api.chat.useSse({
+    path: { roomId },
+    headers: { Authorization: `Bearer ${token}` },
+    onData: (event) => append(event),
+  })
+
+  return (
+    <div>
+      <p>Status: {status}</p>
+      <button onClick={connect}>Connect</button>
+      <button onClick={stop}>Stop</button>
+    </div>
+  )
+}
+```
+
+Call `connect()` to open the stream; it tears down automatically on unmount or when params change. Pass `null` instead of params to keep the hook idle.
+
 ## Cancellation
 
 Hooks automatically cancel in-flight requests when params change or the component unmounts — no stale responses.

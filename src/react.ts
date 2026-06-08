@@ -1,5 +1,6 @@
 export type { CustomError, Errors, HttpMethod, NetworkError, ParseError, ApiResponse, Success } from "./types";
 export type { SseConfig, SseCallSignature, SseListenerFunction, SseConnection } from "./types";
+export type { SseHandlers, SseConnectionStatus, SseConnectionOptions } from "./sse";
 export type { SseHookParams, SseHookResponse } from "./sse-hook";
 export type { RefreshFunction, HookResponse } from "./hook";
 export type { Language } from "./translations";
@@ -17,7 +18,7 @@ import { useSseHook } from "./sse-hook";
  */
 const reactAdapter: ReactAdapter = {
   useHook: (requester, params) => useHook(requester, params),
-  useSseHook: (host, config, params, withCredentials) => useSseHook(host, config, params, withCredentials)
+  useSseHook: (host, config, params, options) => useSseHook(host, config, params, options)
 };
 
 /**

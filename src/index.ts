@@ -1,5 +1,6 @@
 export type { CustomError, Errors, HttpMethod, NetworkError, ParseError, ApiResponse, Success } from "./types";
 export type { SseConfig, SseCallSignature, SseListenerFunction, SseConnection } from "./types";
+export type { SseHandlers, SseConnectionStatus, SseConnectionOptions } from "./sse";
 export type { Language } from "./translations";
 
 import { TapiBuilder } from "./core";
