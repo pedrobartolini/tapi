@@ -2,7 +2,7 @@ import * as Errors from "./errors";
 import { Language, t } from "./translations";
 import * as Types from "./types";
 
-function appendQueryParam(out: URLSearchParams, key: string, value: unknown): void {
+export function appendQueryParam(out: URLSearchParams, key: string, value: unknown): void {
   if (value === null || value === undefined) return;
   if (Array.isArray(value)) {
     value.forEach((item, i) => appendQueryParam(out, `${key}[${i}]`, item));

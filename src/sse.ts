@@ -1,3 +1,5 @@
+import { appendQueryParam } from "./utils";
+
 export type SseConnectionStatus = "connecting" | "open" | "error" | "stopped";
 
 export type SseConnection = {
@@ -28,7 +30,7 @@ export type SseConnectionOptions = {
   credentials?: RequestCredentials;
 };
 
-export function buildSseUrl(host: string, endpoint: string, params: { path?: Record<string, string>; query?: Record<string, string> }): string {
+export function buildSseUrl(host: string, endpoint: string, params: { path?: Record<string, string>; query?: Record<string, unknown> }): string {
   let url = endpoint;
 
   if (params.path) {
@@ -37,7 +39,15 @@ export function buildSseUrl(host: string, endpoint: string, params: { path?: Rec
     }
   }
 
-  const queryString = params.query ? `?${new URLSearchParams(params.query).toString()}` : "";
+  let queryString = "";
+  if (params.query) {
+    const sp = new URLSearchParams();
+    for (const [key, value] of Object.entries(params.query)) {
+      appendQueryParam(sp, key, value);
+    }
+    const s = sp.toString();
+    if (s) queryString = `?${s}`;
+  }
 
   return `${host}${url}${queryString}`;
 }
