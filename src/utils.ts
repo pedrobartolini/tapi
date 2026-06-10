@@ -2,19 +2,33 @@ import * as Errors from "./errors";
 import { Language, t } from "./translations";
 import * as Types from "./types";
 
-export function appendQueryParam(out: URLSearchParams, key: string, value: unknown): void {
-  if (value === null || value === undefined) return;
+/**
+ * Append a query param as encoded `key=value` segments, recursing into arrays
+ * (`key[0]`) and objects (`key[sub]`) to match serde_qs bracket nesting.
+ *
+ * A nested `null` is emitted as a bare valueless key (`a[k]`, no `=`), which
+ * serde_qs parses as `None` — this keeps map entries whose value means "no
+ * restriction". Skipping it (like `undefined`, or a top-level `null`) would
+ * drop the map key entirely. URLSearchParams cannot produce a key without
+ * `=`, hence the manual segment building.
+ */
+export function appendQueryParam(out: string[], key: string, value: unknown, nested = false): void {
+  if (value === undefined) return;
+  if (value === null) {
+    if (nested) out.push(encodeURIComponent(key));
+    return;
+  }
   if (Array.isArray(value)) {
-    value.forEach((item, i) => appendQueryParam(out, `${key}[${i}]`, item));
+    value.forEach((item, i) => appendQueryParam(out, `${key}[${i}]`, item, true));
     return;
   }
   if (typeof value === "object") {
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      appendQueryParam(out, `${key}[${k}]`, v);
+      appendQueryParam(out, `${key}[${k}]`, v, true);
     }
     return;
   }
-  out.append(key, String(value));
+  out.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
 }
 
 /**
@@ -52,12 +66,11 @@ export function buildUrl<T extends Types.RequestConfig<any, any, any, any, any, 
 
   let queryString = "";
   if (params.query) {
-    const sp = new URLSearchParams();
+    const segments: string[] = [];
     for (const [key, value] of Object.entries(params.query as Record<string, unknown>)) {
-      appendQueryParam(sp, key, value);
+      appendQueryParam(segments, key, value);
     }
-    const s = sp.toString();
-    if (s) queryString = `?${s}`;
+    if (segments.length) queryString = `?${segments.join("&")}`;
   }
 
   return `${host}${url}${queryString}`;

@@ -41,12 +41,11 @@ export function buildSseUrl(host: string, endpoint: string, params: { path?: Rec
 
   let queryString = "";
   if (params.query) {
-    const sp = new URLSearchParams();
+    const segments: string[] = [];
     for (const [key, value] of Object.entries(params.query)) {
-      appendQueryParam(sp, key, value);
+      appendQueryParam(segments, key, value);
     }
-    const s = sp.toString();
-    if (s) queryString = `?${s}`;
+    if (segments.length) queryString = `?${segments.join("&")}`;
   }
 
   return `${host}${url}${queryString}`;
