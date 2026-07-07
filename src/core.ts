@@ -1,3 +1,4 @@
+import { DedupeCache } from "./dedupe";
 import type * as Hook from "./hook";
 import * as RequestCreator from "./request";
 import * as Sse from "./sse";
@@ -86,7 +87,8 @@ function createNestedMethods<TError = string>(
   errorHandler: ((response: Response) => Promise<TError>) | undefined,
   language: Language = "en",
   credentials?: RequestCredentials,
-  reactAdapter?: ReactAdapter
+  reactAdapter?: ReactAdapter,
+  dedupe?: DedupeCache
 ) {
   // Store headers and update function references for use by setHeaders method
   let currentHeaders = defaultHeaders;
@@ -108,7 +110,7 @@ function createNestedMethods<TError = string>(
       }
       target[routeName] = sseFunction;
     } else if (isRequestConfig(routeValue)) {
-      const requester = RequestCreator.create(host, routeValue, prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language, credentials);
+      const requester = RequestCreator.create(host, routeValue, prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language, credentials, dedupe);
       if (reactAdapter) {
         (requester as any).useHook = (params: any) => reactAdapter.useHook(requester, params);
       }
@@ -135,7 +137,8 @@ function createNestedMethods<TError = string>(
         errorHandler,
         language,
         credentials,
-        reactAdapter
+        reactAdapter,
+        dedupe
       );
     }
   }
@@ -146,7 +149,7 @@ function createNestedMethods<TError = string>(
 
     // Update existing routes with new headers
     for (const item of updateTargets) {
-      const requester = RequestCreator.create(host, item.config, prefetchCallback, postfetchCallback, headers, errorHandler, language, credentials);
+      const requester = RequestCreator.create(host, item.config, prefetchCallback, postfetchCallback, headers, errorHandler, language, credentials, dedupe);
       if (reactAdapter) {
         (requester as any).useHook = (params: any) => reactAdapter.useHook(requester, params);
       }
@@ -189,6 +192,7 @@ export class TapiBuilder<
   private errorHandler?: (response: Response) => Promise<TError>;
   private language: Language = "en";
   private credentials?: RequestCredentials;
+  private getDedupeTtlMs?: number;
   private reactAdapter?: ReactAdapter;
 
   /**
@@ -219,6 +223,7 @@ export class TapiBuilder<
     builder.errorHandler = this.errorHandler as unknown as (response: Response) => Promise<NError>;
     builder.language = this.language;
     builder.credentials = this.credentials;
+    builder.getDedupeTtlMs = this.getDedupeTtlMs;
     return builder;
   }
 
@@ -296,6 +301,21 @@ export class TapiBuilder<
   }
 
   /**
+   * Deduplicate identical GET requests fired within `ttlMs` milliseconds
+   * (default 1000) into a single network request — e.g. several components on
+   * one screen each fetching the same resource. Every caller receives its own
+   * clone of the shared response; request headers participate in the dedupe
+   * key, so a credentials change is never served another identity's response.
+   * Any non-GET clears the window once it settles, so a refetch awaited after
+   * a mutation always hits the network. Off unless called.
+   */
+  withGetDedupe(ttlMs: number = 1000): TapiBuilder<TRoutes, TError, THasHost, THasRoutes, TReact> {
+    const builder = this.clone<TRoutes, TError, THasHost, THasRoutes>();
+    builder.getDedupeTtlMs = ttlMs;
+    return builder;
+  }
+
+  /**
    * Build the API client with compile-time validation
    *
    * This method enforces that all required configurations are set:
@@ -316,7 +336,8 @@ export class TapiBuilder<
       this.errorHandler,
       this.language,
       this.credentials,
-      this.reactAdapter
+      this.reactAdapter,
+      this.getDedupeTtlMs === undefined ? undefined : new DedupeCache(this.getDedupeTtlMs)
     );
     return apiMethods as any;
   }

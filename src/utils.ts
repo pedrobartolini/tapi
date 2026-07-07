@@ -1,3 +1,4 @@
+import type { DedupeCache } from "./dedupe";
 import * as Errors from "./errors";
 import { Language, t } from "./translations";
 import * as Types from "./types";
@@ -82,7 +83,8 @@ export async function executeRequest<T extends Types.RequestConfig<any, any, any
   params: Types.RequesterParams<T>,
   defaultHeaders?: Record<string, string>,
   language: Language = "en",
-  credentials?: RequestCredentials
+  credentials?: RequestCredentials,
+  dedupe?: DedupeCache
 ): Promise<Response | Types.NetworkError> {
   const translations = t(language);
   const headers = new Headers({ ...defaultHeaders });
@@ -117,6 +119,25 @@ export async function executeRequest<T extends Types.RequestConfig<any, any, any
   }
 
   try {
+    if (dedupe) {
+      if (config.method !== "GET") {
+        // A mutation may invalidate anything cached: clear once it settles so a
+        // refetch awaited after it always hits the network.
+        try {
+          return await fetch(url, { method: config.method, headers, body, signal: params.signal, credentials });
+        } finally {
+          dedupe.clear();
+        }
+      }
+      if (body === undefined && !params.signal?.aborted) {
+        // The shared request drops the caller's signal: one consumer aborting
+        // (e.g. a hook unmounting) must not cancel the fetch for the others.
+        // Aborted callers already discard the settled result. Pre-aborted
+        // callers (and nonstandard GETs with a body) fall through to a plain
+        // fetch for exact native semantics.
+        return await dedupe.run(url, headers, () => fetch(url, { method: config.method, headers, credentials }));
+      }
+    }
     return await fetch(url, { method: config.method, headers, body, signal: params.signal, credentials });
   } catch (error) {
     return Errors.createNetworkError(translations.errors.requestFailed, error instanceof Error ? error : new Error(String(error)));

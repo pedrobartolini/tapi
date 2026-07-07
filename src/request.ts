@@ -1,3 +1,4 @@
+import type { DedupeCache } from "./dedupe";
 import * as Errors from "./errors";
 import * as ResponseSchema from "./response";
 import { Language, t } from "./translations";
@@ -20,7 +21,8 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
   defaultHeaders: Record<string, string> | undefined,
   errorHandler: ((response: Response) => Promise<TError>) | undefined,
   language: Language = "en",
-  credentials?: RequestCredentials
+  credentials?: RequestCredentials,
+  dedupe?: DedupeCache
 ): Types.RequesterFunction<TConfig, TError> {
   const translations = t(language);
 
@@ -61,7 +63,7 @@ export function create<TConfig extends Types.RequestConfig<any, any, any, any, a
           await Promise.resolve(prefetchCallback({ url, method: config.method, headers, body }));
         }
 
-        const responseOrError = await Utils.executeRequest(url, config, params, defaultHeaders, language, credentials);
+        const responseOrError = await Utils.executeRequest(url, config, params, defaultHeaders, language, credentials, dedupe);
         if ("error" in responseOrError) {
           const nError = { ...responseOrError, endpoint: url, method: config.method };
           if (!params.signal?.aborted) dispatchPostFetchCallback(postfetchCallback, nError);

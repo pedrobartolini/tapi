@@ -417,6 +417,26 @@ const api = Tapi.builder()
   .build()
 ```
 
+### GET dedupe
+
+Callers have no shared cache — a screen composing several components that read the same resource (hooks, name-resolution cells, pickers) fires the same GET 2-3× within milliseconds. `withGetDedupe` collapses identical GETs fired within `ttlMs` milliseconds (default 1000) into a single network request:
+
+```ts
+const api = Tapi.builder()
+  .withHost("https://api.example.com")
+  .withGetDedupe(1000)
+  .withRoutes(routes)
+  .build()
+```
+
+Semantics:
+
+- Every caller receives its own clone of the shared response — bodies parse independently.
+- Request headers participate in the dedupe key, so updated credentials (e.g. via `setHeaders`) are never served another identity's response.
+- Any non-GET clears the window once it settles: a refetch awaited after a mutation always hits the network.
+- Non-ok responses are shared while in flight but never served after arrival — retries refetch.
+- Deduped requests drop per-caller abort signals (one consumer aborting must not cancel the others); pre-aborted calls keep native semantics. SSE is unaffected.
+
 ## Types
 
 ```ts
