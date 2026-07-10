@@ -1,6 +1,8 @@
 export type { CustomError, Errors, HttpMethod, NetworkError, ParseError, ApiResponse, Success } from "./types";
 export type { SseConfig, SseCallSignature, SseListenerFunction, SseConnection } from "./types";
 export type { SseHandlers, SseConnectionStatus, SseConnectionOptions } from "./sse";
+export type { WsConfig, WsCallSignature, WsListenerFunction } from "./types";
+export type { WsHandlers, WsConnectionStatus, WsConnectionOptions, WsReconnectPolicy, WsConnection } from "./ws";
 export type { Language } from "./translations";
 
 import { TapiBuilder } from "./core";
@@ -22,7 +24,8 @@ const Tapi = {
   put: Endpoints.put,
   delete: Endpoints.delete,
   patch: Endpoints.patch,
-  sse: Endpoints.sse
+  sse: Endpoints.sse,
+  ws: Endpoints.ws
 } as const;
 
 export default Tapi;

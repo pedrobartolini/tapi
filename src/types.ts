@@ -1,5 +1,6 @@
 import * as ResponseSchema from "./response";
 import type * as Sse from "./sse";
+import type * as Ws from "./ws";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
@@ -27,8 +28,21 @@ export type SseConfig<TPath = undefined, TQuery = undefined, THeaders = undefine
   response: ResponseSchema.ResponseConfig<TResponse>;
 };
 
+/**
+ * Bidirectional WebSocket route: `TSend` is the frame shape the client sends,
+ * `TReceive` the shape the server pushes. No `THeaders` — the browser
+ * WebSocket API cannot set request headers (auth rides on cookies or a
+ * subprotocol).
+ */
+export type WsConfig<TPath = undefined, TQuery = undefined, TSend = unknown, TReceive = unknown> = {
+  type: "ws";
+  endpoint: string;
+  send: ResponseSchema.ResponseConfig<TSend>;
+  receive: ResponseSchema.ResponseConfig<TReceive>;
+};
+
 export type RouteDefinitions = {
-  [key: string]: RequestConfig<any, any, any, any, any, any, any> | SseConfig<any, any, any, any> | RouteDefinitions;
+  [key: string]: RequestConfig<any, any, any, any, any, any, any> | SseConfig<any, any, any, any> | WsConfig<any, any, any, any> | RouteDefinitions;
 };
 
 // Parameter inference types - check if type is defined (not undefined)
@@ -70,6 +84,17 @@ export type SseListenerFunction<TConfig extends SseConfig<any, any, any, any>> =
   params: SseCallSignature<TConfig>,
   handlers: Sse.SseHandlers<ResponseSchema.InferResult<TConfig["response"]>>
 ) => SseConnection;
+
+type ExtractWsPath<T> = T extends WsConfig<infer P, any, any, any> ? P : undefined;
+type ExtractWsQuery<T> = T extends WsConfig<any, infer Q, any, any> ? Q : undefined;
+
+export type WsCallSignature<T extends WsConfig<any, any, any, any>> = InferPathParam<ExtractWsPath<T>> &
+  InferQueryParam<ExtractWsQuery<T>> & { protocols?: string | string[]; reconnect?: boolean | Ws.WsReconnectPolicy };
+
+export type WsListenerFunction<TConfig extends WsConfig<any, any, any, any>> = (
+  params: WsCallSignature<TConfig>,
+  handlers: Ws.WsHandlers<ResponseSchema.InferResult<TConfig["receive"]>>
+) => Ws.WsConnection<ResponseSchema.InferResult<TConfig["send"]>>;
 
 export type SseConnection = {
   connect: () => void;

@@ -211,6 +211,62 @@ function ChatRoom({ roomId }: { roomId: string }) {
 
 Call `connect()` to open the stream; it tears down automatically on unmount or when params change. Pass `null` instead of params to keep the hook idle.
 
+## WebSocket
+
+Define a bidirectional route with `Tapi.ws`. It supports `path`, `query`, `send`, and `receive` type params — `send` is the frame shape the client sends, `receive` the shape the server pushes (both JSON text frames):
+
+```ts
+const routes = {
+  events: Tapi.ws<{
+    send: { type: "subscribe"; topics: string[] }
+    receive: { type: "event"; seq: number; payload: unknown }
+  }>()({ endpoint: "/events/ws" }),
+}
+```
+
+Call the route with params and lifecycle handlers — all handlers optional:
+
+```ts
+const connection = api.events(
+  {},
+  {
+    onMessage: (msg) => console.log(msg.seq), // typed as the receive shape
+    onOpen: () => connection.send({ type: "subscribe", topics: ["billing"] }),
+    onClose: ({ code, reason }) => console.log("closed", code, reason),
+    onError: (error) => console.error(error),
+    onStatusChange: (status) => console.log(status),
+  }
+)
+
+connection.connect() // open the socket
+connection.send(frame) // JSON-serialize and send; false when the socket isn't open
+connection.status() // "connecting" | "open" | "reconnecting" | "stopped"
+connection.stop() // close it (no reconnect, no onClose)
+```
+
+**Reconnection is automatic**: after any non-manual close the connection retries with exponential backoff + jitter (500ms doubling to 15s, reset on success). `onOpen` fires on **every** (re)connect — send your handshake/subscription frames there, since the server has lost all connection state. Disable or tune it per call via params: `api.events({ reconnect: false }, …)` or `{ reconnect: { minDelayMs: 250, maxDelayMs: 5000 } }`.
+
+`send` never buffers: it returns `false` when the socket isn't open. Re-establish state in `onOpen` instead of queueing frames.
+
+Unlike tapi's fetch-based routes, the browser WebSocket API cannot set request headers — so there is no `headers` param and `.withDefaultHeaders(...)` / `.withCredentials(...)` don't apply. Cookies ride along under the browser's normal rules (which covers cookie-session auth), and `protocols` is available for subprotocol-based token schemes.
+
+### React
+
+Routes built from `tapi-rs/react` expose `.useWs()`, which connects on mount and tears down on unmount or when params change:
+
+```tsx
+function LiveFeed() {
+  const { status, send, connect, stop } = api.events.useWs({
+    onMessage: (msg) => append(msg),
+    onOpen: () => send({ type: "subscribe", topics: ["billing"] }),
+  })
+
+  return <p>Status: {status}</p>
+}
+```
+
+Pass `lazy: true` to skip the automatic connect (then call `connect()` yourself), or `null` instead of params to keep the hook idle.
+
 ## Cancellation
 
 Hooks automatically cancel in-flight requests when params change or the component unmounts — no stale responses.

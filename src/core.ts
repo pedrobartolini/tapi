@@ -5,6 +5,8 @@ import * as Sse from "./sse";
 import type * as SseHook from "./sse-hook";
 import { Language } from "./translations";
 import * as Types from "./types";
+import * as Ws from "./ws";
+import type * as WsHook from "./ws-hook";
 
 /**
  * React integration injected by the `tapi-rs/react` entry point.
@@ -22,6 +24,7 @@ export type ReactAdapter = {
     params: any,
     options: { headers?: Record<string, string>; credentials?: RequestCredentials }
   ) => any;
+  useWsHook: (host: string, config: Types.WsConfig<any, any, any, any>, params: any) => any;
 };
 
 type PathBuilderSignature<T extends Types.RequestConfig<any, any, any, any, any, any, any>> =
@@ -35,6 +38,12 @@ type ReactSseMembers<T extends Types.SseConfig<any, any, any, any>, TReact exten
   ? { useSse: (params: SseHook.SseHookParams<T> | null) => SseHook.SseHookResponse }
   : {};
 
+type WsSendOf<T extends Types.WsConfig<any, any, any, any>> = T extends Types.WsConfig<any, any, infer S, any> ? S : never;
+
+type ReactWsMembers<T extends Types.WsConfig<any, any, any, any>, TReact extends boolean> = TReact extends true
+  ? { useWs: (params: WsHook.WsHookParams<T> | null) => WsHook.WsHookResponse<WsSendOf<T>> }
+  : {};
+
 type RouteFunction<T extends Types.RequestConfig<any, any, any, any, any, any, any>, TError = string, TReact extends boolean = false> = Types.RequesterFunction<
   T,
   TError
@@ -44,14 +53,18 @@ type RouteFunction<T extends Types.RequestConfig<any, any, any, any, any, any, a
 
 type SseRouteFunction<T extends Types.SseConfig<any, any, any, any>, TReact extends boolean = false> = Types.SseListenerFunction<T> & ReactSseMembers<T, TReact>;
 
+type WsRouteFunction<T extends Types.WsConfig<any, any, any, any>, TReact extends boolean = false> = Types.WsListenerFunction<T> & ReactWsMembers<T, TReact>;
+
 export type GenerateApiMethods<T extends Types.RouteDefinitions, TError = string, TReact extends boolean = false> = {
   [K in keyof T]: T[K] extends Types.SseConfig<any, any, any, any>
     ? SseRouteFunction<T[K], TReact>
-    : T[K] extends Types.RequestConfig<any, any, any, any, any, any, any>
-      ? RouteFunction<T[K], TError, TReact>
-      : T[K] extends Types.RouteDefinitions
-        ? GenerateApiMethods<T[K], TError, TReact>
-        : never;
+    : T[K] extends Types.WsConfig<any, any, any, any>
+      ? WsRouteFunction<T[K], TReact>
+      : T[K] extends Types.RequestConfig<any, any, any, any, any, any, any>
+        ? RouteFunction<T[K], TError, TReact>
+        : T[K] extends Types.RouteDefinitions
+          ? GenerateApiMethods<T[K], TError, TReact>
+          : never;
 } & {
   /**
    * Update default headers for all requests in this API instance
@@ -72,6 +85,12 @@ function isSseConfig(value: unknown): value is Types.SseConfig<any, any, any, an
   if (typeof value !== "object" || value === null) return false;
   const v = value as any;
   return v.type === "sse" && typeof v.endpoint === "string";
+}
+
+function isWsConfig(value: unknown): value is Types.WsConfig<any, any, any, any> {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as any;
+  return v.type === "ws" && typeof v.endpoint === "string";
 }
 
 /**
@@ -109,6 +128,20 @@ function createNestedMethods<TError = string>(
         (sseFunction as any).useSse = (params: any) => reactAdapter.useSseHook(host, sseConfig, params, { headers: currentHeaders, credentials });
       }
       target[routeName] = sseFunction;
+    } else if (isWsConfig(routeValue)) {
+      // WebSocket rides the native browser API, which cannot set request
+      // headers — default headers and `credentials` don't apply. Cookies are
+      // attached by the browser's own rules; `protocols` is the only
+      // client-controlled handshake field.
+      const wsConfig = routeValue;
+      const wsFunction = (params: any, handlers: Ws.WsHandlers<any>) => {
+        const url = Ws.buildWsUrl(host, wsConfig.endpoint, params);
+        return Ws.createWsConnection(url, handlers, { protocols: params.protocols, reconnect: params.reconnect });
+      };
+      if (reactAdapter) {
+        (wsFunction as any).useWs = (params: any) => reactAdapter.useWsHook(host, wsConfig, params);
+      }
+      target[routeName] = wsFunction;
     } else if (isRequestConfig(routeValue)) {
       const requester = RequestCreator.create(host, routeValue, prefetchCallback, postfetchCallback, currentHeaders, errorHandler, language, credentials, dedupe);
       if (reactAdapter) {

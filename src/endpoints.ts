@@ -1,4 +1,4 @@
-import type { HttpMethod, RequestConfig, SseConfig } from "./types";
+import type { HttpMethod, RequestConfig, SseConfig, WsConfig } from "./types";
 
 /**
  * Configuration object for endpoint factories
@@ -77,6 +77,30 @@ function createSseEndpointFactory() {
 
 export const sse = createSseEndpointFactory();
 
+type WsEndpointTypes<TPath = undefined, TQuery = undefined, TSend = unknown, TReceive = unknown> = {
+  path?: TPath;
+  query?: TQuery;
+  send?: TSend;
+  receive?: TReceive;
+};
+
+type ExtractWsPath<T> = T extends { path: infer P } ? P : undefined;
+type ExtractWsQuery<T> = T extends { query: infer Q } ? Q : undefined;
+type ExtractWsSend<T> = T extends { send: infer S } ? S : unknown;
+type ExtractWsReceive<T> = T extends { receive: infer R } ? R : unknown;
+
+function createWsEndpointFactory() {
+  return <T extends WsEndpointTypes<any, any, any, any> = {}>() =>
+    (config: { endpoint: string }): WsConfig<ExtractWsPath<T>, ExtractWsQuery<T>, ExtractWsSend<T>, ExtractWsReceive<T>> => ({
+      type: "ws" as const,
+      endpoint: config.endpoint,
+      send: {},
+      receive: {}
+    });
+}
+
+export const ws = createWsEndpointFactory();
+
 // Individual endpoint factories
 export const get = createEndpointFactory("GET");
 export const post = createEndpointFactory("POST");
@@ -91,5 +115,6 @@ export const Endpoints = {
   put,
   delete: del,
   patch,
-  sse
+  sse,
+  ws
 } as const;
